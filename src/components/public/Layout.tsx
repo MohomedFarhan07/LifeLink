@@ -153,7 +153,7 @@ export function PublicFooter() {
               <span className="text-lg font-bold text-white">LifeLink</span>
             </div>
             <p className="mt-4 text-sm text-slate-400">
-              Connecting donors, hospitals, blood banks, and volunteers to save lives through coordinated blood and organ donation.
+              Connecting donors, hospitals, and blood banks to save lives through coordinated blood and organ donation.
             </p>
           </div>
           <div>
@@ -171,7 +171,6 @@ export function PublicFooter() {
               <li><Link to="/register" className="hover:text-white">Register as Donor</Link></li>
               <li><Link to="/register" className="hover:text-white">Hospital Registration</Link></li>
               <li><Link to="/register" className="hover:text-white">Blood Bank Network</Link></li>
-              <li><Link to="/register" className="hover:text-white">Volunteer / NGO</Link></li>
             </ul>
           </div>
           <div>

@@ -1,4 +1,4 @@
-export type Role = 'donor' | 'hospital' | 'blood_bank' | 'volunteer' | 'admin';
+export type Role = 'donor' | 'hospital' | 'blood_bank' | 'admin';
 
 export type BloodGroup = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
 
@@ -64,18 +64,6 @@ export interface BloodBank {
   longitude: number | null;
   verification_status: VerificationStatus;
   verification_documents: string[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Volunteer {
-  id: string;
-  user_id: string;
-  organization_name: string;
-  ngo_registration_number: string;
-  contact_number: string;
-  location: string;
-  verification_status: VerificationStatus;
   created_at: string;
   updated_at: string;
 }

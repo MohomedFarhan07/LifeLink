@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Activity, Plus, Droplet, AlertTriangle, Clock, Check, X, Send, TrendingUp, Building2, Package } from 'lucide-react';
+import { Activity, Plus, Droplet, AlertTriangle, Clock, Check, X, Send, TrendingUp, Building2, Package, BookOpen } from 'lucide-react';
 import { DashboardLayout } from '../../components/dashboard/DashboardLayout';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -16,11 +16,12 @@ import { supabase } from '../../lib/supabase';
 import { BloodInventory, BloodBank, BloodTransfer, BloodGroup } from '../../types';
 import { formatDate, BLOOD_GROUPS, daysUntil } from '../../lib/utils';
 import { sendNotification } from '../../lib/notifications';
+import { ContentManager } from '../../components/dashboard/ContentManager';
 
-type Tab = 'overview' | 'inventory' | 'transfers' | 'profile';
+type Tab = 'overview' | 'inventory' | 'transfers' | 'content' | 'profile';
 
 export function BloodBankDashboard() {
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,22 @@ export function BloodBankDashboard() {
   const [inventory, setInventory] = useState<BloodInventory[]>([]);
   const [transfers, setTransfers] = useState<BloodTransfer[]>([]);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'delete') return;
+    setDeleting(true);
+    const { error } = await supabase.rpc('delete_user_account');
+    if (error) {
+      toast('Failed to delete account: ' + error.message, 'error');
+      setDeleting(false);
+    } else {
+      toast('Account and data deleted successfully.');
+      await signOut();
+    }
+  };
   const [addForm, setAddForm] = useState({
     blood_group: 'O+' as BloodGroup,
     units: 1,
@@ -118,6 +135,7 @@ export function BloodBankDashboard() {
     { id: 'overview', label: 'Overview', icon: <TrendingUp className="h-4 w-4" /> },
     { id: 'inventory', label: 'Inventory', icon: <Package className="h-4 w-4" /> },
     { id: 'transfers', label: 'Hospital Requests', icon: <Send className="h-4 w-4" />, badge: pendingTransfers.length },
+    { id: 'content', label: 'Content Publishing', icon: <BookOpen className="h-4 w-4" /> },
     { id: 'profile', label: 'Bank Profile', icon: <Building2 className="h-4 w-4" /> },
   ];
 
@@ -289,6 +307,8 @@ export function BloodBankDashboard() {
         </Card>
       )}
 
+      {tab === 'content' && <ContentManager role="blood_bank" />}
+
       {/* Profile */}
       {tab === 'profile' && bank && (
         <div className="grid gap-6 lg:grid-cols-3">
@@ -311,6 +331,13 @@ export function BloodBankDashboard() {
                 </div>
                 <p className="mt-3 text-sm font-semibold text-slate-900">{profile?.full_name}</p>
                 <p className="text-xs text-slate-500">{profile?.email}</p>
+              </div>
+              <div className="mt-6 border-t border-slate-100 pt-6">
+                <h4 className="text-sm font-semibold text-brand-600">Danger Zone</h4>
+                <p className="mt-1 text-xs text-slate-500">Permanently delete your account and all associated data. This action is irreversible.</p>
+                <Button variant="danger" className="mt-3 w-full" onClick={() => { setDeleteConfirm(''); setDeleteOpen(true); }}>
+                  Delete Account
+                </Button>
               </div>
             </div>
           </Card>
@@ -336,6 +363,37 @@ export function BloodBankDashboard() {
           <Input label="Units" type="number" min={1} value={addForm.units} onChange={(e) => setAddForm({ ...addForm, units: Number(e.target.value) })} />
           <Input label="Collection Date" type="date" value={addForm.collection_date} onChange={(e) => setAddForm({ ...addForm, collection_date: e.target.value })} />
           <Input label="Expiry Date" type="date" value={addForm.expiry_date} onChange={(e) => setAddForm({ ...addForm, expiry_date: e.target.value })} hint="Whole blood expires after 42 days" />
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete Your Account"
+        size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button variant="danger" onClick={handleDeleteAccount} disabled={deleteConfirm !== 'delete' || deleting} loading={deleting}>
+              Permanently Delete Account
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you absolutely sure you want to delete your account? This action will permanently erase your profile, blood bank license, blood inventory, transfers, and all other related records.
+          </p>
+          <div className="rounded-lg bg-brand-50 p-4 text-xs text-brand-700">
+            <strong>Warning:</strong> This process is completely irreversible.
+          </div>
+          <Input
+            label='Type "delete" to confirm'
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+            placeholder="Type delete"
+          />
         </div>
       </Modal>
     </DashboardLayout>

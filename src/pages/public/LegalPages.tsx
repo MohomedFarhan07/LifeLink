@@ -48,7 +48,7 @@ export function PrivacyPolicyPage() {
 export function TermsOfServicePage() {
   return <LegalPage title="Terms of Service" intro="The rules for using LifeLink safely, responsibly, and respectfully." icon={<FileText className="h-6 w-6" />} sections={[
     { title: 'Using LifeLink', body: 'You must provide accurate information, protect your account credentials, and use the platform only for lawful donation-related purposes. You are responsible for activity performed through your account.' },
-    { title: 'Eligibility and verification', body: 'Creating an account does not guarantee blood or organ donation eligibility, matching, or verification. Hospitals, blood banks, volunteers, and other organizations may be subject to review before receiving verified status.' },
+    { title: 'Eligibility and verification', body: 'Creating an account does not guarantee blood or organ donation eligibility, matching, or verification. Hospitals and blood banks may be subject to review before receiving verified status.' },
     { title: 'Acceptable conduct', body: 'Do not submit false medical, identity, organization, or request information. Do not harass others, misuse contact details, interfere with the platform, or use LifeLink to make fraudulent, harmful, or commercial requests.' },
     { title: 'Platform availability', body: 'LifeLink may change, suspend, or improve features at any time. We aim to keep the service available, but do not guarantee uninterrupted access, successful matching, or immediate responses to requests.' },
     { title: 'Account suspension', body: 'We may suspend or remove accounts that violate these terms, create safety risks, or contain inaccurate or misleading information.' },

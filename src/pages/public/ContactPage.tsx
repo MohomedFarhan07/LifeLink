@@ -6,20 +6,26 @@ import { Input, Textarea } from '../../components/ui/Field';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/Toast';
 import { ChatbotWidget } from '../../components/public/ChatbotWidget';
+import { supabase } from '../../lib/supabase';
+import { Link } from 'react-router-dom';
 
 export function ContactPage() {
   const { toast } = useToast();
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [sending, setSending] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
-    setTimeout(() => {
+    const { error } = await supabase.functions.invoke('contact-email', { body: form });
+    if (error) {
       setSending(false);
-      toast('Message sent! We will get back to you within 24 hours.');
-      setForm({ name: '', email: '', subject: '', message: '' });
-    }, 800);
+      toast('Unable to send your message right now. Please try again shortly.', 'error');
+      return;
+    }
+    setSending(false);
+    toast('Message sent! We will get back to you within 24 hours.');
+    setForm({ name: '', email: '', subject: '', message: '' });
   };
 
   return (
@@ -31,6 +37,17 @@ export function ContactPage() {
           </div>
           <h1 className="mt-4 text-4xl font-extrabold text-slate-900">Get in Touch</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">Questions about donation, partnerships, or technical support? We're here to help.</p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-slate-50 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">About LifeLink</p>
+            <h2 className="mt-1 text-xl font-bold text-slate-900">We connect people and organizations to support lifesaving donations.</h2>
+            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-600">Learn about our purpose, the community we serve, and the principles behind LifeLink.</p>
+          </div>
+          <Link to="/about-us" className="shrink-0 rounded-lg bg-brand-600 px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-brand-700">About Us</Link>
         </div>
       </section>
 

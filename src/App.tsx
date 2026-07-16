@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/ui/Toast';
 import { HomePage } from './pages/public/HomePage';
 import { AboutPage } from './pages/public/AboutPage';
+import { AboutUsPage } from './pages/public/AboutUsPage';
 import { AwarenessPage } from './pages/public/AwarenessPage';
 import { StoriesPage } from './pages/public/StoriesPage';
 import { ContactPage } from './pages/public/ContactPage';
@@ -15,7 +16,6 @@ import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
 import { DonorDashboard } from './pages/dashboards/DonorDashboard';
 import { HospitalDashboard } from './pages/dashboards/HospitalDashboard';
 import { BloodBankDashboard } from './pages/dashboards/BloodBankDashboard';
-import { VolunteerDashboard } from './pages/dashboards/VolunteerDashboard';
 import { AdminDashboard } from './pages/dashboards/AdminDashboard';
 import { Droplet, Loader2 } from 'lucide-react';
 import type { JSX } from 'react';
@@ -27,7 +27,6 @@ function DashboardRouter() {
     case 'donor': return <DonorDashboard />;
     case 'hospital': return <HospitalDashboard />;
     case 'blood_bank': return <BloodBankDashboard />;
-    case 'volunteer': return <VolunteerDashboard />;
     case 'admin': return <AdminDashboard />;
     default: return <DonorDashboard />;
   }
@@ -92,6 +91,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/about-us" element={<AboutUsPage />} />
               <Route path="/awareness" element={<AwarenessPage />} />
               <Route path="/stories" element={<StoriesPage />} />
               <Route path="/contact" element={<ContactPage />} />

@@ -20,7 +20,7 @@ import { sendNotification } from '../../lib/notifications';
 type Tab = 'overview' | 'requests' | 'inbox' | 'history' | 'hospitals' | 'profile';
 
 export function DonorDashboard() {
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>('overview');
   const [donor, setDonor] = useState<Donor | null>(null);
@@ -33,6 +33,22 @@ export function DonorDashboard() {
   const [incomingRequests, setIncomingRequests] = useState<Donation[]>([]);
   const [hospitalProfiles, setHospitalProfiles] = useState<Record<string, Profile>>({});
   const [activeChat, setActiveChat] = useState<Donation | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'delete') return;
+    setDeleting(true);
+    const { error } = await supabase.rpc('delete_user_account');
+    if (error) {
+      toast('Failed to delete account: ' + error.message, 'error');
+      setDeleting(false);
+    } else {
+      toast('Account and data deleted successfully.');
+      await signOut();
+    }
+  };
 
   const loadData = useCallback(async () => {
     if (!profile) return;
@@ -505,6 +521,13 @@ export function DonorDashboard() {
                   <span className="font-medium text-slate-900">{formatDate(profile?.created_at)}</span>
                 </div>
               </div>
+              <div className="mt-6 border-t border-slate-100 pt-6">
+                <h4 className="text-sm font-semibold text-brand-600">Danger Zone</h4>
+                <p className="mt-1 text-xs text-slate-500">Permanently delete your account and all associated data. This action is irreversible.</p>
+                <Button variant="danger" className="mt-3 w-full" onClick={() => { setDeleteConfirm(''); setDeleteOpen(true); }}>
+                  Delete Account
+                </Button>
+              </div>
             </div>
           </Card>
         </div>
@@ -542,6 +565,37 @@ export function DonorDashboard() {
           <div className="sm:col-span-2">
             <Textarea label="Medical History" rows={3} value={editForm.medical_history || ''} onChange={(e) => setEditForm({ ...editForm, medical_history: e.target.value })} />
           </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete Your Account"
+        size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button variant="danger" onClick={handleDeleteAccount} disabled={deleteConfirm !== 'delete' || deleting} loading={deleting}>
+              Permanently Delete Account
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you absolutely sure you want to delete your account? This action will permanently erase your profile, medical history, donation history, and all other related records.
+          </p>
+          <div className="rounded-lg bg-brand-50 p-4 text-xs text-brand-700">
+            <strong>Warning:</strong> This process is completely irreversible.
+          </div>
+          <Input
+            label='Type "delete" to confirm'
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+            placeholder="Type delete"
+          />
         </div>
       </Modal>
     </DashboardLayout>

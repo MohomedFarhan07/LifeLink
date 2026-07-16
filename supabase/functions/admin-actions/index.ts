@@ -81,7 +81,7 @@ Deno.serve(async (req: Request) => {
     // ---- VERIFY / REJECT ORGANIZATION ----
     if (action === "verify" && req.method === "POST") {
       const { table, id, status } = body as { table: string; id: string; status: string };
-      if (!["hospitals", "blood_banks", "volunteers"].includes(table)) {
+      if (!["hospitals", "blood_banks"].includes(table)) {
         return new Response(JSON.stringify({ error: "Invalid table" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

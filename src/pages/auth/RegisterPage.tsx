@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock, User, Phone, Droplet, Building2, Activity, HandHeart, Shield, AlertCircle, Check, MapPin, FileText } from 'lucide-react';
+import { Mail, Lock, User, Phone, Droplet, Building2, Activity, Shield, AlertCircle, Check, MapPin, FileText } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { Input, Select } from '../../components/ui/Field';
 import { Button } from '../../components/ui/Button';
@@ -15,7 +15,6 @@ const roles: { id: Role; label: string; icon: React.ReactNode; desc: string }[] 
   { id: 'donor', label: 'Donor', icon: <Droplet className="h-5 w-5" />, desc: 'Donate blood & organs' },
   { id: 'hospital', label: 'Hospital', icon: <Building2 className="h-5 w-5" />, desc: 'Request blood for patients' },
   { id: 'blood_bank', label: 'Blood Bank', icon: <Activity className="h-5 w-5" />, desc: 'Manage blood inventory' },
-  { id: 'volunteer', label: 'Volunteer / NGO', icon: <HandHeart className="h-5 w-5" />, desc: 'Run awareness campaigns' },
 ];
 
 export function RegisterPage() {
@@ -55,10 +54,6 @@ export function RegisterPage() {
   const [licenseNumber, setLicenseNumber] = useState('');
   const [bankContact, setBankContact] = useState('');
 
-  // volunteer
-  const [orgName, setOrgName] = useState('');
-  const [ngoReg, setNgoReg] = useState('');
-  const [orgContact, setOrgContact] = useState('');
 
   const selectRole = (r: Role) => {
     setRole(r);
@@ -74,7 +69,6 @@ export function RegisterPage() {
     const nameForProfile =
       role === 'hospital' ? hospitalName :
       role === 'blood_bank' ? bankName :
-      role === 'volunteer' ? orgName :
       fullName;
 
     const { error: signUpError } = await signUp(email, password, nameForProfile, role, phone);
@@ -126,14 +120,6 @@ export function RegisterPage() {
         location: city,
         latitude: coords.latitude,
         longitude: coords.longitude,
-      });
-    } else if (role === 'volunteer') {
-      await supabase.from('volunteers').insert({
-        user_id: user.id,
-        organization_name: orgName,
-        ngo_registration_number: ngoReg,
-        contact_number: orgContact,
-        location: city,
       });
     }
 
@@ -251,16 +237,6 @@ export function RegisterPage() {
             </div>
           )}
 
-          {role === 'volunteer' && (
-            <div className="rounded-lg bg-amber-50/50 p-4">
-              <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-600"><HandHeart className="h-3.5 w-3.5" /> Organization Information</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input label="Organization Name" required value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Red Hearts NGO" />
-                <Input label="NGO Registration Number" value={ngoReg} onChange={(e) => setNgoReg(e.target.value)} placeholder="NGO-2024-001" />
-                <Input label="Organization Contact" required value={orgContact} onChange={(e) => setOrgContact(e.target.value)} placeholder="+94 11 555 9012" />
-              </div>
-            </div>
-          )}
 
           {error && (
             <div className="flex items-center gap-2 rounded-lg bg-brand-50 px-3.5 py-2.5 text-sm text-brand-700">

@@ -203,7 +203,7 @@ const KB: { keywords: string[]; reply: ChatReply }[] = [
   {
     keywords: ['register', 'sign up', 'become donor', 'how do i'],
     reply: {
-      text: "You can register as a donor on LifeLink! Click 'Register' in the top navigation, choose your role (Donor, Hospital, Blood Bank, or Volunteer), and complete the form. For organ donation preference, toggle it in your donor profile.",
+      text: "You can register on LifeLink! Click 'Register' in the top navigation, choose Donor, Hospital, or Blood Bank, and complete the form. For organ donation preference, toggle it in your donor profile.",
       suggestions: ['Who can donate?', 'What should I do before?'],
     },
   },

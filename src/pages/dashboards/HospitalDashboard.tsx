@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Droplet, Bell, MapPin, Calendar, Activity, Plus, Users, Brain, Sparkles, Check, X, Building2, TrendingUp, FileText, Send, BarChart3, MessageSquare } from 'lucide-react';
+import { Droplet, Bell, MapPin, Calendar, Activity, Plus, Users, Brain, Sparkles, Check, X, Building2, TrendingUp, FileText, Send, BarChart3, MessageSquare, Heart } from 'lucide-react';
 import { DashboardLayout } from '../../components/dashboard/DashboardLayout';
 import { HospitalAnalytics } from '../../components/dashboard/HospitalAnalytics';
 import { ChatPanel } from '../../components/dashboard/ChatPanel';
@@ -18,11 +18,12 @@ import { BloodRequest, BloodGroup, Urgency, Hospital, Donation, Profile } from '
 import { formatDate, BLOOD_GROUPS, CITIES, mockCoords } from '../../lib/utils';
 import { classifyPriority, rankDonorsForRequest, DonorMatch } from '../../lib/ai';
 import { sendNotification } from '../../lib/notifications';
+import { ContentManager } from '../../components/dashboard/ContentManager';
 
-type Tab = 'overview' | 'requests' | 'matching' | 'donations' | 'analytics' | 'profile';
+type Tab = 'overview' | 'requests' | 'matching' | 'donations' | 'stories' | 'analytics' | 'profile';
 
 export function HospitalDashboard() {
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,22 @@ export function HospitalDashboard() {
   const [matching, setMatching] = useState(false);
   const [donorProfiles, setDonorProfiles] = useState<Record<string, Profile>>({});
   const [activeChatDonation, setActiveChatDonation] = useState<Donation | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'delete') return;
+    setDeleting(true);
+    const { error } = await supabase.rpc('delete_user_account');
+    if (error) {
+      toast('Failed to delete account: ' + error.message, 'error');
+      setDeleting(false);
+    } else {
+      toast('Account and data deleted successfully.');
+      await signOut();
+    }
+  };
 
   // create form
   const [form, setForm] = useState({
@@ -202,7 +219,8 @@ export function HospitalDashboard() {
     { id: 'overview', label: 'Overview', icon: <TrendingUp className="h-4 w-4" /> },
     { id: 'requests', label: 'My Requests', icon: <FileText className="h-4 w-4" />, badge: openRequests.length },
     { id: 'matching', label: 'Donor Matching', icon: <Brain className="h-4 w-4" /> },
-    { id: 'donations', label: 'Donations', icon: <Droplet className="h-4 w-4" /> },
+      { id: 'donations', label: 'Donations', icon: <Droplet className="h-4 w-4" /> },
+      { id: 'stories', label: 'Success Stories', icon: <Heart className="h-4 w-4" /> },
     { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="h-4 w-4" /> },
     { id: 'profile', label: 'Hospital Profile', icon: <Building2 className="h-4 w-4" /> },
   ];
@@ -457,6 +475,8 @@ export function HospitalDashboard() {
         <HospitalAnalytics hospitalId={profile.id} />
       )}
 
+      {tab === 'stories' && <ContentManager role="hospital" />}
+
       {/* Profile */}
       {tab === 'profile' && hospital && (
         <div className="grid gap-6 lg:grid-cols-3">
@@ -484,6 +504,13 @@ export function HospitalDashboard() {
               <div className="space-y-2 border-t border-slate-100 pt-4">
                 <div className="flex justify-between text-sm"><span className="text-slate-500">Phone</span><span className="font-medium text-slate-900">{profile?.phone}</span></div>
                 <div className="flex justify-between text-sm"><span className="text-slate-500">Joined</span><span className="font-medium text-slate-900">{formatDate(profile?.created_at)}</span></div>
+              </div>
+              <div className="mt-6 border-t border-slate-100 pt-6">
+                <h4 className="text-sm font-semibold text-brand-600">Danger Zone</h4>
+                <p className="mt-1 text-xs text-slate-500">Permanently delete your account and all associated data. This action is irreversible.</p>
+                <Button variant="danger" className="mt-3 w-full" onClick={() => { setDeleteConfirm(''); setDeleteOpen(true); }}>
+                  Delete Account
+                </Button>
               </div>
             </div>
           </Card>
@@ -542,6 +569,37 @@ export function HospitalDashboard() {
               <p className="mt-2 text-xs text-slate-500">Based on urgency level, required date proximity, and quantity requested. This helps route the most critical needs first.</p>
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete Your Account"
+        size="md"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button variant="danger" onClick={handleDeleteAccount} disabled={deleteConfirm !== 'delete' || deleting} loading={deleting}>
+              Permanently Delete Account
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you absolutely sure you want to delete your account? This action will permanently erase your profile, hospital details, donation requests, and all other related records.
+          </p>
+          <div className="rounded-lg bg-brand-50 p-4 text-xs text-brand-700">
+            <strong>Warning:</strong> This process is completely irreversible.
+          </div>
+          <Input
+            label='Type "delete" to confirm'
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+            placeholder="Type delete"
+          />
         </div>
       </Modal>
     </DashboardLayout>

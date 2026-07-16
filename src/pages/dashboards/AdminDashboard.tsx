@@ -11,7 +11,7 @@ import { Modal } from '../../components/ui/Modal';
 import { VerificationBadge, StatusBadge, BloodGroupBadge } from '../../components/shared/Badges';
 import { BarChart, DonutChart, LineChart } from '../../components/ui/Charts';
 import { supabase } from '../../lib/supabase';
-import { Profile, Hospital, BloodBank, Volunteer, BloodRequest, Donation, Awareness, SuccessStory, Faq } from '../../types';
+import { Profile, Hospital, BloodBank, BloodRequest, Donation, Awareness, SuccessStory, Faq } from '../../types';
 import { formatDate, BLOOD_GROUPS, timeAgo } from '../../lib/utils';
 import { sendNotification } from '../../lib/notifications';
 import { useToast } from '../../components/ui/Toast';
@@ -25,7 +25,6 @@ export function AdminDashboard() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [bloodBanks, setBloodBanks] = useState<BloodBank[]>([]);
-  const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [requests, setRequests] = useState<BloodRequest[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [awareness, setAwareness] = useState<Awareness[]>([]);
@@ -55,10 +54,9 @@ export function AdminDashboard() {
       console.error('Failed to load users:', e);
     }
 
-    const [h, b, v, r, d, a, s, f] = await Promise.all([
+    const [h, b, r, d, a, s, f] = await Promise.all([
       supabase.from('hospitals').select('*').order('created_at', { ascending: false }),
       supabase.from('blood_banks').select('*').order('created_at', { ascending: false }),
-      supabase.from('volunteers').select('*').order('created_at', { ascending: false }),
       supabase.from('blood_requests').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('donations').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('awareness').select('*').order('created_at', { ascending: false }),
@@ -67,7 +65,6 @@ export function AdminDashboard() {
     ]);
     setHospitals((h.data as Hospital[]) || []);
     setBloodBanks((b.data as BloodBank[]) || []);
-    setVolunteers((v.data as Volunteer[]) || []);
     setRequests((r.data as BloodRequest[]) || []);
     setDonations((d.data as Donation[]) || []);
     setAwareness((a.data as Awareness[]) || []);
@@ -98,12 +95,11 @@ export function AdminDashboard() {
     return res.json();
   };
 
-  const verifyOrg = async (table: 'hospitals' | 'blood_banks' | 'volunteers', id: string, status: 'verified' | 'rejected', userId?: string, orgName?: string) => {
+  const verifyOrg = async (table: 'hospitals' | 'blood_banks', id: string, status: 'verified' | 'rejected', userId?: string, orgName?: string) => {
     try {
       await callAdminApi('verify', 'POST', { table, id, status });
       if (table === 'hospitals') setHospitals((p) => p.map((x) => (x.id === id ? { ...x, verification_status: status } : x)));
       if (table === 'blood_banks') setBloodBanks((p) => p.map((x) => (x.id === id ? { ...x, verification_status: status } : x)));
-      if (table === 'volunteers') setVolunteers((p) => p.map((x) => (x.id === id ? { ...x, verification_status: status } : x)));
       if (userId) {
         await sendNotification(userId, 'verification', `Your organization has been ${status}`, status === 'verified' ? `Congratulations! ${orgName} is now verified on LifeLink.` : `Your verification was rejected. Please contact support.`, '/dashboard');
       }
@@ -177,13 +173,11 @@ export function AdminDashboard() {
   const donorsCount = users.filter((u) => u.role === 'donor').length;
   const hospitalsCount = users.filter((u) => u.role === 'hospital').length;
   const banksCount = users.filter((u) => u.role === 'blood_bank').length;
-  const volunteersCount = users.filter((u) => u.role === 'volunteer').length;
   const completedDonations = donations.filter((d) => d.status === 'completed').length;
   const activeRequests = requests.filter((r) => r.status === 'open').length;
   const pendingHospitals = hospitals.filter((h) => h.verification_status === 'pending');
   const pendingBanks = bloodBanks.filter((b) => b.verification_status === 'pending');
-  const pendingVolunteers = volunteers.filter((v) => v.verification_status === 'pending');
-  const pendingVerifications = pendingHospitals.length + pendingBanks.length + pendingVolunteers.length;
+  const pendingVerifications = pendingHospitals.length + pendingBanks.length;
 
   // Blood group distribution (from donors — we need to fetch donor records; approximate from requests)
   const bloodGroupData = BLOOD_GROUPS.map((g) => ({
@@ -195,7 +189,6 @@ export function AdminDashboard() {
     { label: 'Donors', value: donorsCount, color: '#dc2626' },
     { label: 'Hospitals', value: hospitalsCount, color: '#0ea5e9' },
     { label: 'Blood Banks', value: banksCount, color: '#10b981' },
-    { label: 'Volunteers', value: volunteersCount, color: '#f59e0b' },
   ];
 
   // Donations over time (last 6 months mock from created_at)
@@ -256,7 +249,6 @@ export function AdminDashboard() {
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Blood Banks" value={banksCount} icon={<Activity className="h-5 w-5" />} accent="emerald" />
-            <StatCard label="Volunteers / NGOs" value={volunteersCount} icon={<Users className="h-5 w-5" />} accent="amber" />
             <StatCard label="Pending Verifications" value={pendingVerifications} icon={<Shield className="h-5 w-5" />} accent="brand" />
             <StatCard label="Total Users" value={users.length} icon={<Users className="h-5 w-5" />} accent="slate" />
           </div>
@@ -316,7 +308,7 @@ export function AdminDashboard() {
                 <Input icon={<Search className="h-4 w-4" />} placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
               <div className="flex gap-1.5">
-                {['all', 'donor', 'hospital', 'blood_bank', 'volunteer', 'admin'].map((r) => (
+                {['all', 'donor', 'hospital', 'blood_bank', 'admin'].map((r) => (
                   <button key={r} onClick={() => setRoleFilter(r)} className={`rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-colors ${roleFilter === r ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                     {r === 'all' ? 'All' : r.replace('_', ' ')}
                   </button>
@@ -414,27 +406,6 @@ export function AdminDashboard() {
                     <div className="flex gap-2">
                       <Button size="sm" variant="success" onClick={() => verifyOrg('blood_banks', b.id, 'verified', b.user_id, b.bank_name)} icon={<Check className="h-4 w-4" />}>Verify</Button>
                       <Button size="sm" variant="outline" onClick={() => verifyOrg('blood_banks', b.id, 'rejected', b.user_id, b.bank_name)} icon={<X className="h-4 w-4" />}>Reject</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-          {pendingVolunteers.length > 0 && (
-            <Card>
-              <CardHeader title="Volunteers / NGOs Awaiting Verification" subtitle={`${pendingVolunteers.length} pending`} icon={<Users className="h-5 w-5" />} />
-              <div className="space-y-3 p-5">
-                {pendingVolunteers.map((v) => (
-                  <div key={v.id} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600"><Users className="h-5 w-5" /></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-slate-900">{v.organization_name}</p>
-                      <p className="text-xs text-slate-500">NGO Reg: {v.ngo_registration_number || '—'} · {v.location}</p>
-                    </div>
-                    <VerificationBadge status={v.verification_status} />
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="success" onClick={() => verifyOrg('volunteers', v.id, 'verified', v.user_id, v.organization_name)} icon={<Check className="h-4 w-4" />}>Verify</Button>
-                      <Button size="sm" variant="outline" onClick={() => verifyOrg('volunteers', v.id, 'rejected', v.user_id, v.organization_name)} icon={<X className="h-4 w-4" />}>Reject</Button>
                     </div>
                   </div>
                 ))}

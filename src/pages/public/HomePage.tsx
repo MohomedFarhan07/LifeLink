@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Droplet, Heart, Activity, Users, Building2, Shield, MapPin, Sparkles, Brain, AlertTriangle, HandHeart, Stethoscope } from 'lucide-react';
+import { Droplet, Heart, Activity, Users, Building2, Shield, MapPin, Sparkles, Brain, AlertTriangle, Stethoscope } from 'lucide-react';
 import { PublicPage } from '../../components/public/PublicPage';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
@@ -50,7 +50,7 @@ export function HomePage() {
               <br /> Every donor is a hero.
             </h1>
             <p className="mt-6 max-w-xl text-lg text-slate-600">
-              LifeLink connects donors, hospitals, blood banks, and volunteers in a unified platform —
+              LifeLink connects donors, hospitals, and blood banks in a unified platform —
               using smart matching to find the right donor at the right time, fast.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -158,7 +158,6 @@ export function HomePage() {
             { icon: <Droplet className="h-6 w-6" />, title: 'Donor', desc: 'Register, manage availability, get matched to emergency requests near you.', color: 'brand' },
             { icon: <Building2 className="h-6 w-6" />, title: 'Hospital', desc: 'Create urgent blood requests and let AI find compatible donors instantly.', color: 'sky' },
             { icon: <Activity className="h-6 w-6" />, title: 'Blood Bank', desc: 'Track inventory, monitor expiry dates, and approve transfers to hospitals.', color: 'emerald' },
-            { icon: <HandHeart className="h-6 w-6" />, title: 'Volunteer / NGO', desc: 'Run donation campaigns, awareness programs, and community events.', color: 'amber' },
             { icon: <Shield className="h-6 w-6" />, title: 'Admin', desc: 'Verify organizations, manage users, and monitor platform analytics.', color: 'slate' },
           ].map((role) => (
             <Card key={role.title} hover className="p-6">
@@ -217,7 +216,7 @@ export function HomePage() {
         </div>
         <div className="mt-12 grid gap-8 md:grid-cols-4">
           {[
-            { n: '01', title: 'Register', desc: 'Create your account and choose your role — donor, hospital, blood bank, or volunteer.', icon: <Users className="h-6 w-6" /> },
+            { n: '01', title: 'Register', desc: 'Create your account and choose your role — donor, hospital, or blood bank.', icon: <Users className="h-6 w-6" /> },
             { n: '02', title: 'Complete Profile', desc: 'Add your blood group, location, and availability. Hospitals get verified by admins.', icon: <Stethoscope className="h-6 w-6" /> },
             { n: '03', title: 'Get Matched', desc: 'Hospitals post requests; AI instantly ranks the best compatible donors nearby.', icon: <Sparkles className="h-6 w-6" /> },
             { n: '04', title: 'Save Lives', desc: 'Donors accept requests, donations are recorded, and lives are saved.', icon: <Heart className="h-6 w-6" /> },

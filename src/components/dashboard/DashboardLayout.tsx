@@ -24,9 +24,6 @@ const navByRole: Record<Role, NavItem[]> = {
   blood_bank: [
     { label: 'Overview', to: '/dashboard', icon: <Home className="h-5 w-5" /> },
   ],
-  volunteer: [
-    { label: 'Overview', to: '/dashboard', icon: <Home className="h-5 w-5" /> },
-  ],
   admin: [
     { label: 'Overview', to: '/dashboard', icon: <Home className="h-5 w-5" /> },
   ],
@@ -36,7 +33,6 @@ const roleLabels: Record<Role, string> = {
   donor: 'Donor',
   hospital: 'Hospital',
   blood_bank: 'Blood Bank',
-  volunteer: 'Volunteer / NGO',
   admin: 'Administrator',
 };
 
@@ -44,7 +40,6 @@ const roleColors: Record<Role, string> = {
   donor: 'bg-brand-50 text-brand-600',
   hospital: 'bg-sky-50 text-sky-600',
   blood_bank: 'bg-emerald-50 text-emerald-600',
-  volunteer: 'bg-amber-50 text-amber-600',
   admin: 'bg-slate-100 text-slate-600',
 };
 
