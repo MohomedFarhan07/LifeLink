@@ -265,3 +265,20 @@ html * {
   bottom: -10rem;
   border-color: rgba(56, 189, 248, 0.12);
 }
+
+/* News feed loading placeholders */
+.news-shimmer {
+  background: linear-gradient(100deg, #e2e8f0 20%, #f8fafc 38%, #e2e8f0 55%);
+  background-size: 200% 100%;
+  animation: newsShimmer 1.35s ease-in-out infinite;
+}
+
+.dark .news-shimmer {
+  background: linear-gradient(100deg, #1e293b 20%, #334155 38%, #1e293b 55%);
+  background-size: 200% 100%;
+}
+
+@keyframes newsShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}

@@ -9,7 +9,7 @@ const navLinks = [
   { label: 'About Donation', to: '/about' },
   { label: 'Awareness', to: '/awareness' },
   { label: 'Success Stories', to: '/stories' },
-  { label: 'Contact', to: '/contact' },
+  { label: 'Blood News', to: '/news' },
 ];
 
 export function PublicNavbar() {
