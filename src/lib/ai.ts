@@ -228,14 +228,18 @@ const FALLBACK: ChatReply = {
   suggestions: ['Who can donate blood?', 'What should I do before donating?', 'Tell me about organ donation', 'Is blood donation safe?'],
 };
 
-export function chatbotReply(message: string): ChatReply {
+export function knownChatbotReply(message: string): ChatReply | null {
   const lower = message.toLowerCase();
   for (const entry of KB) {
     if (entry.keywords.some((k) => lower.includes(k))) {
       return entry.reply;
     }
   }
-  return FALLBACK;
+  return null;
+}
+
+export function chatbotReply(message: string): ChatReply {
+  return knownChatbotReply(message) ?? FALLBACK;
 }
 
 export const CHATBOT_GREETING: ChatReply = {

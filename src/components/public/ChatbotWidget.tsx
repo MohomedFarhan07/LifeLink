@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot } from 'lucide-react';
-import { CHATBOT_GREETING, chatbotReply } from '../../lib/ai';
+import { CHATBOT_GREETING, chatbotReply, knownChatbotReply } from '../../lib/ai';
+import { supabase } from '../../lib/supabase';
 
 interface Msg { role: 'bot' | 'user'; text: string; suggestions?: string[] }
 
@@ -8,21 +9,37 @@ export function ChatbotWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([{ role: 'bot', text: CHATBOT_GREETING.text, suggestions: CHATBOT_GREETING.suggestions }]);
   const [input, setInput] = useState('');
+  const [thinking, setThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, open]);
 
-  const send = (text: string) => {
+  const send = async (text: string) => {
     const q = text.trim();
     if (!q) return;
     setMessages((m) => [...m, { role: 'user', text: q }]);
     setInput('');
-    const reply = chatbotReply(q);
-    setTimeout(() => {
-      setMessages((m) => [...m, { role: 'bot', text: reply.text, suggestions: reply.suggestions }]);
-    }, 400);
+
+    const knownReply = knownChatbotReply(q);
+    if (knownReply) {
+      setTimeout(() => {
+        setMessages((m) => [...m, { role: 'bot', text: knownReply.text, suggestions: knownReply.suggestions }]);
+      }, 400);
+      return;
+    }
+
+    setThinking(true);
+    const { data, error } = await supabase.functions.invoke('donation-assistant', {
+      body: { message: q },
+    });
+    setThinking(false);
+
+    const reply: { text: string; suggestions?: string[] } = !error && typeof data?.reply === 'string'
+      ? { text: data.reply }
+      : chatbotReply(q);
+    setMessages((m) => [...m, { role: 'bot', text: reply.text, suggestions: reply.suggestions }]);
   };
 
   return (
@@ -83,6 +100,13 @@ export function ChatbotWidget() {
                 )}
               </div>
             ))}
+            {thinking && (
+              <div className="flex justify-start">
+                <div className="rounded-2xl rounded-bl-sm bg-white px-3.5 py-2.5 text-sm text-slate-500 shadow-sm">
+                  Thinking...
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Input */}
@@ -97,7 +121,7 @@ export function ChatbotWidget() {
                 placeholder="Ask about donation..."
                 className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
-              <button type="submit" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white transition-colors hover:bg-brand-700 disabled:opacity-50" disabled={!input.trim()}>
+              <button type="submit" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white transition-colors hover:bg-brand-700 disabled:opacity-50" disabled={!input.trim() || thinking}>
                 <Send className="h-4 w-4" />
               </button>
             </form>
