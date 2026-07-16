@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Building2, Activity, Droplet, Shield, Check, X, Trash2, TrendingUp, BookOpen, Heart, AlertTriangle, Search, Brain } from 'lucide-react';
+import { Users, Building2, Activity, Droplet, Shield, Check, X, Trash2, TrendingUp, BookOpen, Heart, AlertTriangle, Search, Brain, Plus, Pencil } from 'lucide-react';
 import { DashboardLayout } from '../../components/dashboard/DashboardLayout';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Field';
+import { Input, Textarea } from '../../components/ui/Field';
 import { Badge } from '../../components/ui/Badge';
 import { StatCard } from '../../components/ui/StatCard';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -11,7 +11,7 @@ import { Modal } from '../../components/ui/Modal';
 import { VerificationBadge, StatusBadge, BloodGroupBadge } from '../../components/shared/Badges';
 import { BarChart, DonutChart, LineChart } from '../../components/ui/Charts';
 import { supabase } from '../../lib/supabase';
-import { Profile, Hospital, BloodBank, Volunteer, BloodRequest, Donation, Awareness, SuccessStory } from '../../types';
+import { Profile, Hospital, BloodBank, Volunteer, BloodRequest, Donation, Awareness, SuccessStory, Faq } from '../../types';
 import { formatDate, BLOOD_GROUPS, timeAgo } from '../../lib/utils';
 import { sendNotification } from '../../lib/notifications';
 import { useToast } from '../../components/ui/Toast';
@@ -30,9 +30,13 @@ export function AdminDashboard() {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [awareness, setAwareness] = useState<Awareness[]>([]);
   const [stories, setStories] = useState<SuccessStory[]>([]);
+  const [faqs, setFaqs] = useState<Faq[]>([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [deleteTarget, setDeleteTarget] = useState<Profile | null>(null);
+  const [faqModalOpen, setFaqModalOpen] = useState(false);
+  const [editingFaq, setEditingFaq] = useState<Faq | null>(null);
+  const [faqForm, setFaqForm] = useState({ question: '', answer: '', category: 'general', display_order: '0' });
 
   const loadData = useCallback(async () => {
     // Load users via edge function (admin-only)
@@ -51,7 +55,7 @@ export function AdminDashboard() {
       console.error('Failed to load users:', e);
     }
 
-    const [h, b, v, r, d, a, s] = await Promise.all([
+    const [h, b, v, r, d, a, s, f] = await Promise.all([
       supabase.from('hospitals').select('*').order('created_at', { ascending: false }),
       supabase.from('blood_banks').select('*').order('created_at', { ascending: false }),
       supabase.from('volunteers').select('*').order('created_at', { ascending: false }),
@@ -59,6 +63,7 @@ export function AdminDashboard() {
       supabase.from('donations').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('awareness').select('*').order('created_at', { ascending: false }),
       supabase.from('success_stories').select('*').order('story_date', { ascending: false }),
+      supabase.from('faqs').select('*').order('display_order', { ascending: true }),
     ]);
     setHospitals((h.data as Hospital[]) || []);
     setBloodBanks((b.data as BloodBank[]) || []);
@@ -67,6 +72,7 @@ export function AdminDashboard() {
     setDonations((d.data as Donation[]) || []);
     setAwareness((a.data as Awareness[]) || []);
     setStories((s.data as SuccessStory[]) || []);
+    setFaqs((f.data as Faq[]) || []);
     setLoading(false);
   }, []);
 
@@ -117,6 +123,52 @@ export function AdminDashboard() {
     } catch (e: any) {
       toast('Failed to delete user: ' + e.message, 'error');
     }
+  };
+
+  const openFaqEditor = (faq?: Faq) => {
+    setEditingFaq(faq || null);
+    setFaqForm(faq
+      ? { question: faq.question, answer: faq.answer, category: faq.category, display_order: String(faq.display_order) }
+      : { question: '', answer: '', category: 'general', display_order: String(faqs.length) });
+    setFaqModalOpen(true);
+  };
+
+  const saveFaq = async () => {
+    if (!faqForm.question.trim() || !faqForm.answer.trim()) {
+      toast('Please enter both a question and an answer.', 'error');
+      return;
+    }
+    const values = {
+      question: faqForm.question.trim(),
+      answer: faqForm.answer.trim(),
+      category: faqForm.category.trim() || 'general',
+      display_order: Number(faqForm.display_order) || 0,
+    };
+    const query = editingFaq
+      ? supabase.from('faqs').update(values).eq('id', editingFaq.id).select().single()
+      : supabase.from('faqs').insert(values).select().single();
+    const { data, error } = await query;
+    if (error) {
+      toast('Failed to save FAQ: ' + error.message, 'error');
+      return;
+    }
+    const saved = data as Faq;
+    setFaqs((current) => (editingFaq
+      ? current.map((faq) => faq.id === saved.id ? saved : faq)
+      : [...current, saved]).sort((a, b) => a.display_order - b.display_order));
+    setFaqModalOpen(false);
+    toast(editingFaq ? 'FAQ updated successfully.' : 'FAQ added successfully.');
+  };
+
+  const deleteFaq = async (faq: Faq) => {
+    if (!window.confirm(`Delete the FAQ “${faq.question}”?`)) return;
+    const { error } = await supabase.from('faqs').delete().eq('id', faq.id);
+    if (error) {
+      toast('Failed to delete FAQ: ' + error.message, 'error');
+      return;
+    }
+    setFaqs((current) => current.filter((item) => item.id !== faq.id));
+    toast('FAQ deleted successfully.');
   };
 
   if (loading) return <DashboardLayout><div className="h-64 animate-pulse rounded-xl bg-slate-100" /></DashboardLayout>;
@@ -435,6 +487,35 @@ export function AdminDashboard() {
               )}
             </div>
           </Card>
+          <Card className="lg:col-span-2">
+            <CardHeader
+              title="Frequently Asked Questions"
+              subtitle={`${faqs.length} published FAQs`}
+              icon={<BookOpen className="h-5 w-5" />}
+              action={<Button size="sm" onClick={() => openFaqEditor()} icon={<Plus className="h-4 w-4" />}>Add FAQ</Button>}
+            />
+            <div className="p-5">
+              {faqs.length === 0 ? (
+                <EmptyState icon={<BookOpen className="h-6 w-6" />} title="No FAQs yet" description="Add common questions to help LifeLink users." action={<Button onClick={() => openFaqEditor()} icon={<Plus className="h-4 w-4" />}>Add first FAQ</Button>} />
+              ) : (
+                <div className="space-y-2">
+                  {faqs.map((faq) => (
+                    <div key={faq.id} className="flex items-start gap-3 rounded-lg border border-slate-100 p-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-900">{faq.question}</p>
+                        <p className="mt-1 line-clamp-2 text-xs text-slate-500">{faq.answer}</p>
+                        <p className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">{faq.category} · Order {faq.display_order}</p>
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <button onClick={() => openFaqEditor(faq)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" title="Edit FAQ"><Pencil className="h-4 w-4" /></button>
+                        <button onClick={() => deleteFaq(faq)} className="rounded-md p-1.5 text-slate-400 hover:bg-brand-50 hover:text-brand-600" title="Delete FAQ"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
       )}
 
@@ -493,6 +574,29 @@ export function AdminDashboard() {
         }
       >
         <p className="text-sm text-slate-600">Are you sure you want to delete <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email})? This will remove their profile, donations, and all associated data. This action cannot be undone.</p>
+      </Modal>
+
+      <Modal
+        open={faqModalOpen}
+        onClose={() => setFaqModalOpen(false)}
+        title={editingFaq ? 'Edit FAQ' : 'Add FAQ'}
+        subtitle="This question and answer will be stored in Supabase."
+        size="lg"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setFaqModalOpen(false)}>Cancel</Button>
+            <Button onClick={saveFaq} icon={<Check className="h-4 w-4" />}>{editingFaq ? 'Save Changes' : 'Add FAQ'}</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input label="Question" required value={faqForm.question} onChange={(e) => setFaqForm({ ...faqForm, question: e.target.value })} placeholder="Who can donate blood?" />
+          <Textarea label="Answer" required rows={5} value={faqForm.answer} onChange={(e) => setFaqForm({ ...faqForm, answer: e.target.value })} placeholder="Provide a clear, medically reviewed answer..." />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Category" value={faqForm.category} onChange={(e) => setFaqForm({ ...faqForm, category: e.target.value })} placeholder="Eligibility" />
+            <Input label="Display Order" type="number" min="0" value={faqForm.display_order} onChange={(e) => setFaqForm({ ...faqForm, display_order: e.target.value })} />
+          </div>
+        </div>
       </Modal>
     </DashboardLayout>
   );
