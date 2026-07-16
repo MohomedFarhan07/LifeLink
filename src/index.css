@@ -224,3 +224,44 @@ html * {
   transition-duration: 0.15s;
   transition-timing-function: ease;
 }
+
+/* Public-page hero treatment */
+.public-hero {
+  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 52%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dark .public-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(220, 38, 38, 0.22), transparent 35%),
+    radial-gradient(circle at 88% 85%, rgba(14, 165, 233, 0.14), transparent 32%),
+    linear-gradient(135deg, #111827 0%, #0b1120 55%, #101827 100%);
+  border-bottom-color: #334155;
+}
+
+.dark .public-hero::before,
+.dark .public-hero::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  border-radius: 9999px;
+  border: 1px solid rgba(248, 113, 113, 0.14);
+}
+
+.dark .public-hero::before {
+  width: 22rem;
+  height: 22rem;
+  right: -9rem;
+  top: -12rem;
+}
+
+.dark .public-hero::after {
+  width: 15rem;
+  height: 15rem;
+  left: -7rem;
+  bottom: -10rem;
+  border-color: rgba(56, 189, 248, 0.12);
+}

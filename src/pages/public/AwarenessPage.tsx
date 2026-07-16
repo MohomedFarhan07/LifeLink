@@ -43,7 +43,7 @@ export function AwarenessPage() {
 
   return (
     <PublicPage>
-      <section className="bg-gradient-to-br from-brand-50 via-white to-slate-50 py-16">
+      <section className="public-hero py-16">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
           <div className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
             <Sparkles className="h-3.5 w-3.5" /> Awareness Programs

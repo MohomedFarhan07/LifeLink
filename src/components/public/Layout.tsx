@@ -184,9 +184,9 @@ export function PublicFooter() {
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-slate-800 pt-6 sm:flex-row">
           <p className="text-xs text-slate-500">© 2026 LifeLink. All rights reserved. Every donation saves lives.</p>
           <div className="flex items-center gap-4 text-xs text-slate-500">
-            <span>Privacy Policy</span>
-            <span>Terms of Service</span>
-            <span>Medical Disclaimer</span>
+            <Link to="/privacy" className="hover:text-white">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-white">Terms of Service</Link>
+            <Link to="/medical-disclaimer" className="hover:text-white">Medical Disclaimer</Link>
           </div>
         </div>
       </div>

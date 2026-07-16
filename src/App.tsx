@@ -7,6 +7,7 @@ import { AboutPage } from './pages/public/AboutPage';
 import { AwarenessPage } from './pages/public/AwarenessPage';
 import { StoriesPage } from './pages/public/StoriesPage';
 import { ContactPage } from './pages/public/ContactPage';
+import { PrivacyPolicyPage, TermsOfServicePage, MedicalDisclaimerPage } from './pages/public/LegalPages';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
@@ -93,6 +94,9 @@ export default function App() {
               <Route path="/awareness" element={<AwarenessPage />} />
               <Route path="/stories" element={<StoriesPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/privacy" element={<PrivacyPolicyPage />} />
+              <Route path="/terms" element={<TermsOfServicePage />} />
+              <Route path="/medical-disclaimer" element={<MedicalDisclaimerPage />} />
               <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
               <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
               <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPasswordPage /></PublicOnlyRoute>} />
