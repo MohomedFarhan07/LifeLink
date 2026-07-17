@@ -19,7 +19,8 @@ import { formatDate, BLOOD_GROUPS, CITIES, mockCoords } from '../../lib/utils';
 import { classifyPriority, rankDonorsForRequest, DonorMatch } from '../../lib/ai';
 import { sendNotification } from '../../lib/notifications';
 import { ContentManager } from '../../components/dashboard/ContentManager';
-import { Connections, HospitalBankFinder } from '../../components/dashboard/ApprovedConnections';
+import { Connections, HospitalBankFinder, HospitalTransferFinder } from '../../components/dashboard/ApprovedConnections';
+import { PublicProfileLink } from '../../components/shared/PublicProfileLink';
 
 type Tab = 'overview' | 'requests' | 'matching' | 'donations' | 'stories' | 'analytics' | 'profile' | 'bank_matching' | 'connections';
 
@@ -27,6 +28,7 @@ export function HospitalDashboard() {
   const { profile, signOut } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>('overview');
+  const [bankRequestView, setBankRequestView] = useState<'blood' | 'connection'>('blood');
   const [loading, setLoading] = useState(true);
   const [hospital, setHospital] = useState<Hospital | null>(null);
   const [requests, setRequests] = useState<BloodRequest[]>([]);
@@ -374,7 +376,7 @@ export function HospitalDashboard() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-900">{m.donor.full_name}</p>
+                          <PublicProfileLink userId={m.donor.user_id} role="donor" label={m.donor.full_name || 'Donor'} className="text-sm font-semibold text-slate-900" />
                           <BloodGroupBadge group={m.donor.blood_group} size="sm" />
                           {m.exactGroup && <Badge variant="success">Exact match</Badge>}
                         </div>
@@ -445,7 +447,7 @@ export function HospitalDashboard() {
                           return (
                             <tr key={d.id} className="border-b border-slate-50">
                               <td className="py-3 pr-4"><BloodGroupBadge group={d.blood_group} size="sm" /></td>
-                              <td className="py-3 pr-4 text-slate-600">{donor?.full_name || 'Donor'}</td>
+                              <td className="py-3 pr-4 text-slate-600"><PublicProfileLink userId={d.donor_id} role="donor" label={donor?.full_name || 'Donor'} /></td>
                               <td className="py-3 pr-4 text-slate-600">{formatDate(d.donation_date)}</td>
                               <td className="py-3 pr-4"><StatusBadge status={d.status} /></td>
                               <td className="py-3 pr-4">
@@ -473,7 +475,18 @@ export function HospitalDashboard() {
         <HospitalAnalytics hospitalId={profile.id} />
       )}
 
-      {tab === 'bank_matching' && profile && <HospitalBankFinder profile={profile} />}
+      {tab === 'bank_matching' && profile && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader title="Blood Bank Services" subtitle="Choose whether you need blood inventory or a direct coordination chat." icon={<Building2 className="h-5 w-5" />} />
+            <div className="flex flex-col gap-2 p-4 sm:flex-row">
+              <Button variant={bankRequestView === 'blood' ? 'primary' : 'outline'} onClick={() => setBankRequestView('blood')} icon={<Droplet className="h-4 w-4" />}>Request Blood Units</Button>
+              <Button variant={bankRequestView === 'connection' ? 'primary' : 'outline'} onClick={() => setBankRequestView('connection')} icon={<MessageSquare className="h-4 w-4" />}>Request a Chat Connection</Button>
+            </div>
+          </Card>
+          {bankRequestView === 'blood' ? <HospitalTransferFinder profile={profile} /> : <HospitalBankFinder profile={profile} />}
+        </div>
+      )}
       {tab === 'connections' && profile && <Connections profile={profile} />}
       {tab === 'stories' && <ContentManager role="hospital" />}
 

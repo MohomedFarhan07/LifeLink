@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { supabase } from '../../lib/supabase';
 import { ChatMessage } from '../../types';
+import { PublicProfileLink } from '../shared/PublicProfileLink';
 
 interface ChatPanelProps {
   donationId: string;
@@ -101,7 +102,7 @@ export function ChatPanel({
           {recipientName?.split(' ').map((n) => n[0]).join('').slice(0, 2) || '?'}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-900">{recipientName}</p>
+          <PublicProfileLink userId={recipientId} label={recipientName} className="truncate text-sm font-semibold text-slate-900" />
           {recipientSubtitle && <p className="truncate text-xs text-slate-500">{recipientSubtitle}</p>}
         </div>
         <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-600">

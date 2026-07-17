@@ -15,6 +15,7 @@ import { Profile, Hospital, BloodBank, BloodRequest, Donation, Awareness, Succes
 import { formatDate, BLOOD_GROUPS, timeAgo } from '../../lib/utils';
 import { sendNotification } from '../../lib/notifications';
 import { useToast } from '../../components/ui/Toast';
+import { PublicProfileLink } from '../../components/shared/PublicProfileLink';
 
 type Tab = 'overview' | 'users' | 'verifications' | 'content' | 'requests';
 
@@ -44,14 +45,28 @@ export function AdminDashboard() {
       Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
       'Content-Type': 'application/json',
     };
+    let usersLoaded = false;
     try {
       const res = await fetch(apiUrl, { headers });
       if (res.ok) {
         const data = await res.json();
-        setUsers(data.users || []);
+        if (Array.isArray(data.users)) {
+          setUsers(data.users as Profile[]);
+          usersLoaded = true;
+        }
       }
     } catch (e) {
       console.error('Failed to load users:', e);
+    }
+    // The profiles policy allows authenticated users to read profiles. This keeps
+    // the Admin Users page functional if the Edge Function is unavailable.
+    if (!usersLoaded) {
+      const { data: profileRows, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (profilesError) console.error('Failed to load profiles:', profilesError);
+      else setUsers((profileRows as Profile[]) || []);
     }
 
     const [h, b, r, d, a, s, f] = await Promise.all([
@@ -77,27 +92,14 @@ export function AdminDashboard() {
     loadData();
   }, [loadData]);
 
-  const callAdminApi = async (action: string, method: string, body?: any) => {
-    const session = (await supabase.auth.getSession()).data.session;
-    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-actions?action=${action}`;
-    const res = await fetch(apiUrl, {
-      method,
-      headers: {
-        Authorization: `Bearer ${session?.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Request failed (${res.status})`);
-    }
-    return res.json();
-  };
-
   const verifyOrg = async (table: 'hospitals' | 'blood_banks', id: string, status: 'verified' | 'rejected', userId?: string, orgName?: string) => {
     try {
-      await callAdminApi('verify', 'POST', { table, id, status });
+      const { error } = await supabase.rpc('update_organization_verification', {
+        organization_table: table,
+        organization_id: id,
+        new_status: status,
+      });
+      if (error) throw error;
       if (table === 'hospitals') setHospitals((p) => p.map((x) => (x.id === id ? { ...x, verification_status: status } : x)));
       if (table === 'blood_banks') setBloodBanks((p) => p.map((x) => (x.id === id ? { ...x, verification_status: status } : x)));
       if (userId) {
@@ -112,7 +114,8 @@ export function AdminDashboard() {
   const deleteUser = async () => {
     if (!deleteTarget) return;
     try {
-      await callAdminApi('delete-user', 'POST', { userId: deleteTarget.id });
+      const { error } = await supabase.rpc('delete_user_as_admin', { target_user_id: deleteTarget.id });
+      if (error) throw error;
       setUsers((p) => p.filter((u) => u.id !== deleteTarget.id));
       toast('User deleted successfully.');
       setDeleteTarget(null);
@@ -203,9 +206,16 @@ export function AdminDashboard() {
     return { label, value };
   });
 
-  const filteredUsers = users.filter(
-    (u) => (roleFilter === 'all' || u.role === roleFilter) && (u.full_name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()))
-  );
+  const searchTerms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const filteredUsers = users.filter((user) => {
+    if (roleFilter !== 'all' && user.role !== roleFilter) return false;
+    if (searchTerms.length === 0) return true;
+    const searchable = [user.full_name, user.email, user.phone, user.city, user.address, user.role]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return searchTerms.every((term) => searchable.includes(term));
+  });
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'overview', label: 'Analytics', icon: <TrendingUp className="h-4 w-4" /> },
@@ -305,7 +315,7 @@ export function AdminDashboard() {
           <div className="p-5">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex-1">
-                <Input icon={<Search className="h-4 w-4" />} placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Input icon={<Search className="h-4 w-4" />} placeholder="Search name, email, role, city, or phone..." value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
               <div className="flex gap-1.5">
                 {['all', 'donor', 'hospital', 'blood_bank', 'admin'].map((r) => (
@@ -338,7 +348,7 @@ export function AdminDashboard() {
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
                               {u.full_name?.split(' ').map((n) => n[0]).join('').slice(0, 2) || 'U'}
                             </div>
-                            <span className="font-medium text-slate-900">{u.full_name || '—'}</span>
+                            <PublicProfileLink userId={u.id} role={u.role} label={u.full_name || '—'} className="font-medium text-slate-900" />
                           </div>
                         </td>
                         <td className="py-3 pr-4 text-slate-600">{u.email}</td>
@@ -378,7 +388,7 @@ export function AdminDashboard() {
                   <div key={h.id} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-center">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 text-sky-600"><Building2 className="h-5 w-5" /></div>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-slate-900">{h.hospital_name}</p>
+                      <PublicProfileLink userId={h.user_id} role="hospital" label={h.hospital_name || 'Hospital'} className="text-sm font-semibold text-slate-900" />
                       <p className="text-xs text-slate-500">Reg: {h.registration_number} · {h.hospital_type} · {h.location}</p>
                     </div>
                     <VerificationBadge status={h.verification_status} />
@@ -399,7 +409,7 @@ export function AdminDashboard() {
                   <div key={b.id} className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-center">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600"><Activity className="h-5 w-5" /></div>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-slate-900">{b.bank_name}</p>
+                      <PublicProfileLink userId={b.user_id} role="blood_bank" label={b.bank_name || 'Blood Bank'} className="text-sm font-semibold text-slate-900" />
                       <p className="text-xs text-slate-500">License: {b.license_number} · {b.location}</p>
                     </div>
                     <VerificationBadge status={b.verification_status} />
@@ -515,7 +525,7 @@ export function AdminDashboard() {
                     {requests.slice(0, 20).map((r) => (
                       <tr key={r.id} className="border-b border-slate-50">
                         <td className="py-3 pr-4"><BloodGroupBadge group={r.blood_group} size="sm" /></td>
-                        <td className="py-3 pr-4 text-slate-600 truncate max-w-[160px]">{r.hospital_name}</td>
+                        <td className="py-3 pr-4 text-slate-600 truncate max-w-[160px]"><PublicProfileLink userId={r.hospital_id} role="hospital" label={r.hospital_name || 'Hospital'} /></td>
                         <td className="py-3 pr-4"><Badge variant={r.patient_urgency === 'critical' ? 'error' : r.patient_urgency === 'high' ? 'warning' : 'info'} dot className="capitalize">{r.patient_urgency}</Badge></td>
                         <td className="py-3 pr-4 text-slate-600">{r.quantity_units}</td>
                         <td className="py-3 pr-4"><StatusBadge status={r.status} /></td>

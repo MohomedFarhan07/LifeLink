@@ -155,8 +155,17 @@ export function RegisterPage() {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2 rounded-lg bg-sky-50 px-3.5 py-2.5 text-xs text-sky-700">
-            <Shield className="h-4 w-4 shrink-0" /> Admin accounts are created internally by the platform team.
+          <div className="relative overflow-hidden rounded-xl border border-sky-100 bg-gradient-to-r from-sky-50 via-white to-emerald-50 px-4 py-3 shadow-sm dark:border-sky-900/70 dark:bg-gradient-to-r dark:from-sky-950/70 dark:via-slate-900 dark:to-emerald-950/50">
+            <div className="relative flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm ring-4 ring-sky-100/70 dark:bg-sky-500 dark:ring-sky-950/80">
+                <Shield className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Every role helps save lives</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">Choose the role that best describes how you want to support your community. You can complete your details in the next step.</p>
+              </div>
+            </div>
+            <div className="absolute -right-3 -top-3 h-16 w-16 rounded-full bg-emerald-200/40 dark:bg-emerald-400/10" />
           </div>
         </div>
       )}

@@ -5,21 +5,28 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Field';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { supabase } from '../../lib/supabase';
-import { SuccessStory } from '../../types';
+import { Role, SuccessStory } from '../../types';
 import { formatDate } from '../../lib/utils';
 import { Modal } from '../../components/ui/Modal';
 import { ChatbotWidget } from '../../components/public/ChatbotWidget';
+import { PublicProfileLink } from '../../components/shared/PublicProfileLink';
 
 export function StoriesPage() {
   const [stories, setStories] = useState<SuccessStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<SuccessStory | null>(null);
+  const [authorRoles, setAuthorRoles] = useState<Record<string, Role>>({});
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('success_stories').select('*').order('story_date', { ascending: false });
       setStories((data as SuccessStory[]) || []);
+      const authorIds = [...new Set(((data as SuccessStory[]) || []).map((story) => story.author_id).filter(Boolean))];
+      if (authorIds.length) {
+        const { data: authors } = await supabase.from('public_profiles').select('id, role').in('id', authorIds);
+        setAuthorRoles(Object.fromEntries((authors || []).map((author) => [author.id, author.role as Role])));
+      }
       setLoading(false);
     })();
   }, []);
@@ -91,7 +98,7 @@ export function StoriesPage() {
             )}
             <p className="text-sm leading-relaxed text-slate-700">{selected.description}</p>
             <div className="mt-4 flex items-center gap-2 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-700">
-              <Heart className="h-4 w-4" /> Shared by {selected.author_name || 'LifeLink Team'}
+              <Heart className="h-4 w-4" /> Shared by <PublicProfileLink userId={selected.author_id || undefined} role={selected.author_id ? authorRoles[selected.author_id] : undefined} label={selected.author_name || 'LifeLink Team'} />
             </div>
           </div>
         )}

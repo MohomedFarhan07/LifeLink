@@ -9,6 +9,7 @@ import { AwarenessPage } from './pages/public/AwarenessPage';
 import { StoriesPage } from './pages/public/StoriesPage';
 import { ContactPage } from './pages/public/ContactPage';
 import { NewsPage } from './pages/public/NewsPage';
+import { PublicProfilePage } from './pages/public/PublicProfilePage';
 import { PrivacyPolicyPage, TermsOfServicePage, MedicalDisclaimerPage } from './pages/public/LegalPages';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
@@ -96,6 +97,7 @@ export default function App() {
               <Route path="/stories" element={<StoriesPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/news" element={<NewsPage />} />
+              <Route path="/people/:userId" element={<PublicProfilePage />} />
               <Route path="/privacy" element={<PrivacyPolicyPage />} />
               <Route path="/terms" element={<TermsOfServicePage />} />
               <Route path="/medical-disclaimer" element={<MedicalDisclaimerPage />} />

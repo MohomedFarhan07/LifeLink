@@ -13,11 +13,12 @@ import { BarChart } from '../../components/ui/Charts';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { supabase } from '../../lib/supabase';
-import { BloodInventory, BloodBank, BloodTransfer, BloodGroup } from '../../types';
+import { BloodInventory, BloodBank, BloodTransfer, BloodGroup, Profile } from '../../types';
 import { formatDate, BLOOD_GROUPS, daysUntil } from '../../lib/utils';
 import { sendNotification } from '../../lib/notifications';
 import { ContentManager } from '../../components/dashboard/ContentManager';
 import { BankDonorFinder, ConnectionRequests, Connections } from '../../components/dashboard/ApprovedConnections';
+import { PublicProfileLink } from '../../components/shared/PublicProfileLink';
 
 type Tab = 'overview' | 'inventory' | 'transfers' | 'content' | 'profile' | 'donor_matching' | 'connection_requests' | 'connections';
 
@@ -29,6 +30,8 @@ export function BloodBankDashboard() {
   const [bank, setBank] = useState<BloodBank | null>(null);
   const [inventory, setInventory] = useState<BloodInventory[]>([]);
   const [transfers, setTransfers] = useState<BloodTransfer[]>([]);
+  const [hospitalProfiles, setHospitalProfiles] = useState<Record<string, Profile>>({});
+  const [openConnectionId, setOpenConnectionId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
@@ -62,7 +65,13 @@ export function BloodBankDashboard() {
     setInventory((inv as BloodInventory[]) || []);
 
     const { data: tr } = await supabase.from('blood_transfers').select('*').eq('bank_id', profile.id).order('created_at', { ascending: false });
-    setTransfers((tr as BloodTransfer[]) || []);
+    const transferRows = (tr as BloodTransfer[]) || [];
+    setTransfers(transferRows);
+    const hospitalIds = [...new Set(transferRows.map((transfer) => transfer.hospital_id))];
+    if (hospitalIds.length) {
+      const { data: profiles } = await supabase.from('profiles').select('*').in('id', hospitalIds);
+      setHospitalProfiles(Object.fromEntries(((profiles as Profile[]) || []).map((hospitalProfile) => [hospitalProfile.id, hospitalProfile])));
+    }
 
     setLoading(false);
   }, [profile]);
@@ -106,14 +115,17 @@ export function BloodBankDashboard() {
   };
 
   const approveTransfer = async (t: BloodTransfer) => {
-    await supabase.from('blood_transfers').update({ status: 'approved' }).eq('id', t.id);
+    const { error } = await supabase.rpc('approve_blood_transfer', { transfer_id: t.id });
+    if (error) { toast(`Could not approve transfer: ${error.message}`, 'error'); return; }
     setTransfers((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: 'approved' } : x)));
     await sendNotification(t.hospital_id, 'transfer', 'Blood transfer approved', `Your ${t.blood_group} blood transfer request has been approved by the blood bank.`, '/dashboard');
     toast('Transfer approved. Hospital notified.');
+    void loadData();
   };
 
   const rejectTransfer = async (t: BloodTransfer) => {
-    await supabase.from('blood_transfers').update({ status: 'rejected' }).eq('id', t.id);
+    const { error } = await supabase.from('blood_transfers').update({ status: 'rejected' }).eq('id', t.id);
+    if (error) { toast(`Could not reject transfer: ${error.message}`, 'error'); return; }
     setTransfers((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: 'rejected' } : x)));
     await sendNotification(t.hospital_id, 'transfer', 'Blood transfer rejected', `Your ${t.blood_group} blood transfer request has been rejected.`, '/dashboard');
     toast('Transfer rejected. Hospital notified.');
@@ -135,9 +147,9 @@ export function BloodBankDashboard() {
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'overview', label: 'Overview', icon: <TrendingUp className="h-4 w-4" /> },
     { id: 'inventory', label: 'Inventory', icon: <Package className="h-4 w-4" /> },
-    { id: 'transfers', label: 'Hospital Requests', icon: <Send className="h-4 w-4" />, badge: pendingTransfers.length },
+    { id: 'transfers', label: 'Hospital Blood Requests', icon: <Send className="h-4 w-4" />, badge: pendingTransfers.length },
     { id: 'donor_matching', label: 'Find Donors', icon: <Search className="h-4 w-4" /> },
-    { id: 'connection_requests', label: 'Connection Requests', icon: <HeartHandshake className="h-4 w-4" /> },
+    { id: 'connection_requests', label: 'Chat Requests', icon: <HeartHandshake className="h-4 w-4" /> },
     { id: 'connections', label: 'My Connections', icon: <MessageSquare className="h-4 w-4" /> },
     { id: 'content', label: 'Content Publishing', icon: <BookOpen className="h-4 w-4" /> },
     { id: 'profile', label: 'Bank Profile', icon: <Building2 className="h-4 w-4" /> },
@@ -160,7 +172,10 @@ export function BloodBankDashboard() {
         {tabs.map((t) => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              setTab(t.id);
+              if (t.id === 'connections') setOpenConnectionId(null);
+            }}
             className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
               tab === t.id ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
@@ -280,31 +295,37 @@ export function BloodBankDashboard() {
       {/* Transfers */}
       {tab === 'transfers' && (
         <Card>
-          <CardHeader title="Hospital Transfer Requests" subtitle="Approve or reject blood transfer requests from hospitals" icon={<Send className="h-5 w-5" />} />
+          <CardHeader title="Hospital Blood Requests" subtitle="Review a hospital's requested blood type and units. Approval reserves that exact inventory immediately." icon={<Send className="h-5 w-5" />} />
           <div className="p-5">
             {transfers.length === 0 ? (
-              <EmptyState icon={<Send className="h-6 w-6" />} title="No transfer requests" description="Blood transfer requests from hospitals will appear here for approval." />
+              <EmptyState icon={<Send className="h-6 w-6" />} title="No hospital blood requests" description="Requests submitted against your available inventory will appear here." />
             ) : (
               <div className="space-y-3">
-                {transfers.map((t) => (
-                  <div key={t.id} className="rounded-lg border border-slate-200 p-4">
+                {transfers.map((t) => {
+                  const inventoryItem = inventory.find((item) => item.id === t.inventory_id);
+                  const hospitalName = hospitalProfiles[t.hospital_id]?.full_name || 'Hospital';
+                  const canFulfil = Boolean(inventoryItem && inventoryItem.status === 'available' && inventoryItem.units >= t.units);
+                  return <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                       <BloodGroupBadge group={t.blood_group} size="lg" />
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-slate-900">{t.units} units requested</p>
-                        <p className="mt-0.5 text-xs text-slate-500">Requested {formatDate(t.created_at)}</p>
+                        <p className="text-sm font-semibold text-slate-900"><PublicProfileLink userId={t.hospital_id} role="hospital" label={hospitalName} /> requests {t.units} unit(s)</p>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                          <span>Requested {formatDate(t.created_at)}</span>
+                          <span>{inventoryItem ? `${inventoryItem.units} unit(s) currently available` : 'Inventory item unavailable'}</span>
+                        </div>
                         {t.notes && <p className="mt-1 text-sm text-slate-600">{t.notes}</p>}
                       </div>
                       <StatusBadge status={t.status} />
                       {t.status === 'requested' && (
                         <div className="flex gap-2">
-                          <Button size="sm" variant="success" onClick={() => approveTransfer(t)} icon={<Check className="h-4 w-4" />}>Approve</Button>
+                          <Button size="sm" variant="success" disabled={!canFulfil} onClick={() => approveTransfer(t)} icon={<Check className="h-4 w-4" />}>{canFulfil ? 'Approve & Reserve' : 'Insufficient stock'}</Button>
                           <Button size="sm" variant="outline" onClick={() => rejectTransfer(t)} icon={<X className="h-4 w-4" />}>Reject</Button>
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  </div>;
+                })}
               </div>
             )}
           </div>
@@ -312,8 +333,8 @@ export function BloodBankDashboard() {
       )}
 
       {tab === 'donor_matching' && profile && <BankDonorFinder profile={profile} />}
-      {tab === 'connection_requests' && profile && <ConnectionRequests profile={profile} />}
-      {tab === 'connections' && profile && <Connections profile={profile} />}
+      {tab === 'connection_requests' && profile && <ConnectionRequests profile={profile} onAccepted={(connection) => { setOpenConnectionId(connection.id); setTab('connections'); }} />}
+      {tab === 'connections' && profile && <Connections profile={profile} openConnectionId={openConnectionId} />}
       {tab === 'content' && <ContentManager role="blood_bank" />}
 
       {/* Profile */}

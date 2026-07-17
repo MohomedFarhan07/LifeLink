@@ -6,10 +6,11 @@ import { Input } from '../../components/ui/Field';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { supabase } from '../../lib/supabase';
-import { Awareness, Faq } from '../../types';
+import { Awareness, Faq, Role } from '../../types';
 import { formatDate } from '../../lib/utils';
 import { Modal } from '../../components/ui/Modal';
 import { ChatbotWidget } from '../../components/public/ChatbotWidget';
+import { PublicProfileLink } from '../../components/shared/PublicProfileLink';
 
 export function AwarenessPage() {
   const [articles, setArticles] = useState<Awareness[]>([]);
@@ -19,6 +20,7 @@ export function AwarenessPage() {
   const [category, setCategory] = useState('all');
   const [openFaq, setOpenFaq] = useState<string | null>(null);
   const [selected, setSelected] = useState<Awareness | null>(null);
+  const [authorRoles, setAuthorRoles] = useState<Record<string, Role>>({});
 
   useEffect(() => {
     (async () => {
@@ -28,6 +30,11 @@ export function AwarenessPage() {
       ]);
       setArticles(a as Awareness[] || []);
       setFaqs(f as Faq[] || []);
+      const authorIds = [...new Set(((a as Awareness[] || []).map((article) => article.author_id).filter(Boolean)))];
+      if (authorIds.length) {
+        const { data: authors } = await supabase.from('public_profiles').select('id, role').in('id', authorIds);
+        setAuthorRoles(Object.fromEntries((authors || []).map((author) => [author.id, author.role as Role])));
+      }
       setLoading(false);
     })();
   }, []);
@@ -98,7 +105,7 @@ export function AwarenessPage() {
                   <h3 className="mt-3 text-base font-semibold text-slate-900 line-clamp-2">{a.title}</h3>
                   <p className="mt-1.5 text-sm text-slate-500 line-clamp-2">{a.description}</p>
                   <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
-                    <span>By {a.author_name || 'LifeLink'}</span>
+                    <span>By <PublicProfileLink userId={a.author_id || undefined} role={a.author_id ? authorRoles[a.author_id] : undefined} label={a.author_name || 'LifeLink'} /></span>
                     <span>{formatDate(a.created_at)}</span>
                   </div>
                 </div>

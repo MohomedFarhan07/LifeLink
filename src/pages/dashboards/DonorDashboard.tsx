@@ -17,6 +17,7 @@ import { Donor, BloodRequest, Donation, Hospital, BloodGroup, Profile } from '..
 import { formatDate, BLOOD_GROUPS, compatibleDonorGroups, daysUntil } from '../../lib/utils';
 import { sendNotification } from '../../lib/notifications';
 import { CampaignFinder, ConnectionRequests, Connections } from '../../components/dashboard/ApprovedConnections';
+import { PublicProfileLink } from '../../components/shared/PublicProfileLink';
 
 type Tab = 'overview' | 'requests' | 'inbox' | 'history' | 'hospitals' | 'profile' | 'campaigns' | 'bank_requests' | 'connections';
 
@@ -246,7 +247,7 @@ export function DonorDashboard() {
                       <div key={req.id} className="flex items-center gap-4 rounded-lg border border-slate-100 p-4">
                         <BloodGroupBadge group={req.blood_group} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">{req.hospital_name}</p>
+                          <PublicProfileLink userId={req.hospital_id} role="hospital" label={req.hospital_name || 'Hospital'} className="text-sm font-semibold text-slate-900 truncate" />
                           <p className="text-xs text-slate-500 flex items-center gap-1"><MapPin className="h-3 w-3" /> {req.location} · {req.quantity_units} units</p>
                         </div>
                         <UrgencyBadge urgency={req.patient_urgency} />
@@ -307,7 +308,7 @@ export function DonorDashboard() {
                       <BloodGroupBadge group={req.blood_group} size="lg" />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-900">{req.hospital_name}</p>
+                          <PublicProfileLink userId={req.hospital_id} role="hospital" label={req.hospital_name || 'Hospital'} className="text-sm font-semibold text-slate-900" />
                           <UrgencyBadge urgency={req.patient_urgency} />
                         </div>
                         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
@@ -375,7 +376,7 @@ export function DonorDashboard() {
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                             <BloodGroupBadge group={don.blood_group} size="lg" />
                             <div className="flex-1">
-                              <p className="text-sm font-semibold text-slate-900">{hosp?.full_name || 'Hospital'}</p>
+                              <PublicProfileLink userId={don.hospital_id} role="hospital" label={hosp?.full_name || 'Hospital'} className="text-sm font-semibold text-slate-900" />
                               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                                 <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(don.donation_date)}</span>
                                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Received {formatDate(don.created_at)}</span>
@@ -466,7 +467,7 @@ export function DonorDashboard() {
                           <Building2 className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">{h.hospital_name}</p>
+                          <PublicProfileLink userId={h.user_id} role="hospital" label={h.hospital_name || 'Hospital'} className="text-sm font-semibold text-slate-900" />
                           <Badge variant="success" dot>Verified</Badge>
                         </div>
                       </div>

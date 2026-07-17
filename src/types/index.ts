@@ -19,6 +19,20 @@ export interface Profile {
   updated_at: string;
 }
 
+export interface PublicProfile {
+  id: string;
+  role: Exclude<Role, 'admin'>;
+  display_name: string;
+  city: string;
+  avatar_url: string;
+  blood_group: BloodGroup | null;
+  availability_status: Donor['availability_status'] | null;
+  organization_name: string | null;
+  organization_type: Hospital['hospital_type'] | null;
+  location: string | null;
+  verification_status: VerificationStatus | null;
+}
+
 export interface Donor {
   id: string;
   user_id: string;
