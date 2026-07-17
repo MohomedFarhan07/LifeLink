@@ -130,6 +130,7 @@ export interface Awareness {
   content: string;
   category: string;
   image_url: string;
+  location: string;
   author_id: string | null;
   author_name: string;
   created_at: string;
@@ -141,6 +142,7 @@ export interface SuccessStory {
   title: string;
   description: string;
   image_url: string;
+  location: string;
   recipient_name: string;
   author_id: string | null;
   author_name: string;

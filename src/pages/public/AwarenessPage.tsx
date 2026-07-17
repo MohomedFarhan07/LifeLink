@@ -33,11 +33,11 @@ export function AwarenessPage() {
   }, []);
 
   const categories = ['all', ...Array.from(new Set(articles.map((a) => a.category)))];
-  const filtered = articles.filter(
-    (a) =>
-      (category === 'all' || a.category === category) &&
-      (a.title.toLowerCase().includes(search.toLowerCase()) || a.description.toLowerCase().includes(search.toLowerCase()))
-  );
+  const query = search.trim().toLocaleLowerCase();
+  const filtered = articles.filter((a) => {
+    const searchable = [a.title, a.description, a.content, a.category, a.location, a.author_name].join(' ').toLocaleLowerCase();
+    return (category === 'all' || a.category === category) && (!query || searchable.includes(query));
+  });
 
   const faqCategories = Array.from(new Set(faqs.map((f) => f.category)));
 
@@ -59,7 +59,7 @@ export function AwarenessPage() {
           <h2 className="text-2xl font-bold text-slate-900">Awareness Articles</h2>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="w-full sm:w-64">
-              <Input icon={<Search className="h-4 w-4" />} placeholder="Search articles..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input icon={<Search className="h-4 w-4" />} placeholder="Search title, description, location..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
           </div>
         </div>

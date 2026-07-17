@@ -150,18 +150,18 @@ export function HomePage() {
       {/* Roles */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-slate-900">One platform. Five ways to save lives.</h2>
+          <h2 className="text-3xl font-bold text-slate-900">One platform. Four ways to save lives.</h2>
           <p className="mx-auto mt-3 max-w-2xl text-slate-600">Whether you give blood, coordinate emergencies, manage inventory, or organize campaigns — LifeLink gives you the tools.</p>
         </div>
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { icon: <Droplet className="h-6 w-6" />, title: 'Donor', desc: 'Register, manage availability, get matched to emergency requests near you.', color: 'brand' },
             { icon: <Building2 className="h-6 w-6" />, title: 'Hospital', desc: 'Create urgent blood requests and let AI find compatible donors instantly.', color: 'sky' },
             { icon: <Activity className="h-6 w-6" />, title: 'Blood Bank', desc: 'Track inventory, monitor expiry dates, and approve transfers to hospitals.', color: 'emerald' },
             { icon: <Shield className="h-6 w-6" />, title: 'Admin', desc: 'Verify organizations, manage users, and monitor platform analytics.', color: 'slate' },
           ].map((role) => (
-            <Card key={role.title} hover className="p-6">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+            <Card key={role.title} hover className="p-6 text-center">
+              <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-xl ${
                 role.color === 'brand' ? 'bg-brand-50 text-brand-600' :
                 role.color === 'sky' ? 'bg-sky-50 text-sky-600' :
                 role.color === 'emerald' ? 'bg-emerald-50 text-emerald-600' :
