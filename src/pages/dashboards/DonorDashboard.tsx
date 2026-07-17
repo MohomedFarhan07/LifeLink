@@ -34,6 +34,7 @@ export function DonorDashboard() {
   const [incomingRequests, setIncomingRequests] = useState<Donation[]>([]);
   const [hospitalProfiles, setHospitalProfiles] = useState<Record<string, Profile>>({});
   const [activeChat, setActiveChat] = useState<Donation | null>(null);
+  const [openConnectionId, setOpenConnectionId] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -206,7 +207,10 @@ export function DonorDashboard() {
         {tabs.map((t) => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              setTab(t.id);
+              if (t.id === 'connections') setOpenConnectionId(null);
+            }}
             className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
               tab === t.id ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
@@ -482,8 +486,8 @@ export function DonorDashboard() {
 
       {/* Profile */}
       {tab === 'campaigns' && profile && <CampaignFinder profile={profile} />}
-      {tab === 'bank_requests' && profile && <ConnectionRequests profile={profile} />}
-      {tab === 'connections' && profile && <Connections profile={profile} />}
+      {tab === 'bank_requests' && profile && <ConnectionRequests profile={profile} onAccepted={(connection) => { setOpenConnectionId(connection.id); setTab('connections'); }} />}
+      {tab === 'connections' && profile && <Connections profile={profile} openConnectionId={openConnectionId} />}
 
       {tab === 'profile' && donor && (
         <div className="grid gap-6 lg:grid-cols-3">

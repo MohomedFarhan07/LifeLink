@@ -47,6 +47,17 @@ ALTER TABLE public.connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.connection_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.campaign_participants ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "connection_requests_select_parties" ON public.connection_requests;
+DROP POLICY IF EXISTS "connection_requests_insert_requester" ON public.connection_requests;
+DROP POLICY IF EXISTS "connection_requests_update_recipient" ON public.connection_requests;
+DROP POLICY IF EXISTS "connections_select_parties" ON public.connections;
+DROP POLICY IF EXISTS "connection_messages_select_parties" ON public.connection_messages;
+DROP POLICY IF EXISTS "connection_messages_insert_sender" ON public.connection_messages;
+DROP POLICY IF EXISTS "connection_messages_update_recipient" ON public.connection_messages;
+DROP POLICY IF EXISTS "campaign_participants_select" ON public.campaign_participants;
+DROP POLICY IF EXISTS "campaign_participants_insert_donor" ON public.campaign_participants;
+DROP POLICY IF EXISTS "campaign_participants_update_donor" ON public.campaign_participants;
+
 CREATE POLICY "connection_requests_select_parties" ON public.connection_requests FOR SELECT TO authenticated USING (auth.uid() IN (requester_id, recipient_id));
 CREATE POLICY "connection_requests_insert_requester" ON public.connection_requests FOR INSERT TO authenticated WITH CHECK (auth.uid() = requester_id);
 CREATE POLICY "connection_requests_update_recipient" ON public.connection_requests FOR UPDATE TO authenticated USING (auth.uid() = recipient_id) WITH CHECK (auth.uid() = recipient_id);

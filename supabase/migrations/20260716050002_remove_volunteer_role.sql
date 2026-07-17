@@ -18,6 +18,9 @@ ALTER TABLE public.profiles
 DROP POLICY IF EXISTS "awareness_insert_authed" ON public.awareness;
 DROP POLICY IF EXISTS "awareness_update_own_admin" ON public.awareness;
 DROP POLICY IF EXISTS "awareness_delete_own_admin" ON public.awareness;
+DROP POLICY IF EXISTS "awareness_insert_blood_bank" ON public.awareness;
+DROP POLICY IF EXISTS "awareness_update_blood_bank" ON public.awareness;
+DROP POLICY IF EXISTS "awareness_delete_blood_bank" ON public.awareness;
 CREATE POLICY "awareness_insert_blood_bank"
 ON public.awareness FOR INSERT TO authenticated
 WITH CHECK (auth.uid() = author_id AND (public.is_admin() OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'blood_bank')));
@@ -33,6 +36,9 @@ USING ((auth.uid() = author_id AND EXISTS (SELECT 1 FROM public.profiles WHERE i
 DROP POLICY IF EXISTS "stories_insert_authed" ON public.success_stories;
 DROP POLICY IF EXISTS "stories_update_own_admin" ON public.success_stories;
 DROP POLICY IF EXISTS "stories_delete_own_admin" ON public.success_stories;
+DROP POLICY IF EXISTS "stories_insert_hospital_or_bank" ON public.success_stories;
+DROP POLICY IF EXISTS "stories_update_hospital_or_bank" ON public.success_stories;
+DROP POLICY IF EXISTS "stories_delete_hospital_or_bank" ON public.success_stories;
 CREATE POLICY "stories_insert_hospital_or_bank"
 ON public.success_stories FOR INSERT TO authenticated
 WITH CHECK (auth.uid() = author_id AND (public.is_admin() OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('hospital', 'blood_bank'))));
@@ -48,6 +54,9 @@ USING ((auth.uid() = author_id AND EXISTS (SELECT 1 FROM public.profiles WHERE i
 DROP POLICY IF EXISTS "campaigns_insert_authed" ON public.campaigns;
 DROP POLICY IF EXISTS "campaigns_update_own" ON public.campaigns;
 DROP POLICY IF EXISTS "campaigns_delete_own" ON public.campaigns;
+DROP POLICY IF EXISTS "campaigns_insert_blood_bank" ON public.campaigns;
+DROP POLICY IF EXISTS "campaigns_update_blood_bank" ON public.campaigns;
+DROP POLICY IF EXISTS "campaigns_delete_blood_bank" ON public.campaigns;
 CREATE POLICY "campaigns_insert_blood_bank"
 ON public.campaigns FOR INSERT TO authenticated
 WITH CHECK (auth.uid() = organizer_id AND (public.is_admin() OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'blood_bank')));
