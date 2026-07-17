@@ -19,8 +19,9 @@ import { formatDate, BLOOD_GROUPS, CITIES, mockCoords } from '../../lib/utils';
 import { classifyPriority, rankDonorsForRequest, DonorMatch } from '../../lib/ai';
 import { sendNotification } from '../../lib/notifications';
 import { ContentManager } from '../../components/dashboard/ContentManager';
+import { Connections, HospitalBankFinder } from '../../components/dashboard/ApprovedConnections';
 
-type Tab = 'overview' | 'requests' | 'matching' | 'donations' | 'stories' | 'analytics' | 'profile';
+type Tab = 'overview' | 'requests' | 'matching' | 'donations' | 'stories' | 'analytics' | 'profile' | 'bank_matching' | 'connections';
 
 export function HospitalDashboard() {
   const { profile, signOut } = useAuth();
@@ -134,9 +135,8 @@ export function HospitalDashboard() {
     setCreateOpen(false);
     toast(`Emergency request created. AI classified it as ${priority.urgency.toUpperCase()} (score: ${priority.score}).`);
 
-    // Auto-match
-    runMatching(data as BloodRequest);
-    setTab('matching');
+    // Hospitals coordinate with verified blood banks; direct donor matching is intentionally disabled.
+    setTab('bank_matching');
   };
 
   const runMatching = async (req: BloodRequest) => {
@@ -218,8 +218,8 @@ export function HospitalDashboard() {
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'overview', label: 'Overview', icon: <TrendingUp className="h-4 w-4" /> },
     { id: 'requests', label: 'My Requests', icon: <FileText className="h-4 w-4" />, badge: openRequests.length },
-    { id: 'matching', label: 'Donor Matching', icon: <Brain className="h-4 w-4" /> },
-      { id: 'donations', label: 'Donations', icon: <Droplet className="h-4 w-4" /> },
+    { id: 'bank_matching', label: 'Find Blood Banks', icon: <Building2 className="h-4 w-4" /> },
+    { id: 'connections', label: 'My Connections', icon: <MessageSquare className="h-4 w-4" /> },
       { id: 'stories', label: 'Success Stories', icon: <Heart className="h-4 w-4" /> },
     { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="h-4 w-4" /> },
     { id: 'profile', label: 'Hospital Profile', icon: <Building2 className="h-4 w-4" /> },
@@ -281,9 +281,7 @@ export function HospitalDashboard() {
                         </div>
                         <p className="mt-1 text-xs text-slate-500">{req.quantity_units} units · Required by {formatDate(req.required_date)}</p>
                       </div>
-                      {req.status === 'open' && (
-                        <Button size="sm" variant="outline" onClick={() => runMatching(req)} icon={<Brain className="h-4 w-4" />}>Find Donors</Button>
-                      )}
+                      {req.status === 'open' && <Button size="sm" variant="outline" onClick={() => setTab('bank_matching')} icon={<Building2 className="h-4 w-4" />}>Find Blood Banks</Button>}
                     </div>
                   ))}
                 </div>
@@ -323,7 +321,7 @@ export function HospitalDashboard() {
                       <div className="flex gap-2">
                         {req.status === 'open' && (
                           <>
-                            <Button size="sm" variant="outline" onClick={() => runMatching(req)} icon={<Brain className="h-4 w-4" />}>Find Donors</Button>
+                            <Button size="sm" variant="outline" onClick={() => setTab('bank_matching')} icon={<Building2 className="h-4 w-4" />}>Find Blood Banks</Button>
                             <Button size="sm" variant="ghost" onClick={() => cancelRequest(req)} icon={<X className="h-4 w-4" />}>Cancel</Button>
                           </>
                         )}
@@ -475,6 +473,8 @@ export function HospitalDashboard() {
         <HospitalAnalytics hospitalId={profile.id} />
       )}
 
+      {tab === 'bank_matching' && profile && <HospitalBankFinder profile={profile} />}
+      {tab === 'connections' && profile && <Connections profile={profile} />}
       {tab === 'stories' && <ContentManager role="hospital" />}
 
       {/* Profile */}

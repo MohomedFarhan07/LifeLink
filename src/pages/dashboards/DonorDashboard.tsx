@@ -16,8 +16,9 @@ import { supabase } from '../../lib/supabase';
 import { Donor, BloodRequest, Donation, Hospital, BloodGroup, Profile } from '../../types';
 import { formatDate, BLOOD_GROUPS, compatibleDonorGroups, daysUntil } from '../../lib/utils';
 import { sendNotification } from '../../lib/notifications';
+import { CampaignFinder, ConnectionRequests, Connections } from '../../components/dashboard/ApprovedConnections';
 
-type Tab = 'overview' | 'requests' | 'inbox' | 'history' | 'hospitals' | 'profile';
+type Tab = 'overview' | 'requests' | 'inbox' | 'history' | 'hospitals' | 'profile' | 'campaigns' | 'bank_requests' | 'connections';
 
 export function DonorDashboard() {
   const { profile, signOut } = useAuth();
@@ -175,10 +176,10 @@ export function DonorDashboard() {
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'overview', label: 'Overview', icon: <TrendingUp className="h-4 w-4" /> },
-    { id: 'requests', label: 'Emergency Requests', icon: <Bell className="h-4 w-4" />, badge: requests.length },
-    { id: 'inbox', label: 'Inbox', icon: <Inbox className="h-4 w-4" />, badge: incomingRequests.filter((d) => d.status === 'pending').length },
+    { id: 'campaigns', label: 'Campaigns', icon: <Calendar className="h-4 w-4" /> },
+    { id: 'bank_requests', label: 'Bank Requests', icon: <Inbox className="h-4 w-4" /> },
+    { id: 'connections', label: 'My Connections', icon: <MessageSquare className="h-4 w-4" /> },
     { id: 'history', label: 'Donation History', icon: <Clock className="h-4 w-4" /> },
-    { id: 'hospitals', label: 'Nearby Hospitals', icon: <Building2 className="h-4 w-4" /> },
     { id: 'profile', label: 'My Profile', icon: <User className="h-4 w-4" /> },
   ];
 
@@ -231,10 +232,10 @@ export function DonorDashboard() {
 
           <div className="grid gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-              <CardHeader title="Active Emergency Requests" subtitle="Compatible with your blood group" icon={<Bell className="h-5 w-5" />} />
+              <CardHeader title="Donation Campaigns" subtitle="Join blood-donation campaigns near you" icon={<Calendar className="h-5 w-5" />} />
               <div className="p-5">
                 {requests.length === 0 ? (
-                  <EmptyState icon={<Bell className="h-6 w-6" />} title="No active requests" description="You'll be notified when hospitals near you need your blood group." />
+                  <EmptyState icon={<Calendar className="h-6 w-6" />} title="Find a campaign" description="Search available blood-donation campaigns and register to participate." action={<Button onClick={() => setTab('campaigns')}>Browse Campaigns</Button>} />
                 ) : (
                   <div className="space-y-3">
                     {requests.slice(0, 4).map((req) => (
@@ -245,7 +246,7 @@ export function DonorDashboard() {
                           <p className="text-xs text-slate-500 flex items-center gap-1"><MapPin className="h-3 w-3" /> {req.location} · {req.quantity_units} units</p>
                         </div>
                         <UrgencyBadge urgency={req.patient_urgency} />
-                        <Button size="sm" onClick={() => respondToRequest(req, true)} icon={<Check className="h-4 w-4" />}>Accept</Button>
+                        <Button size="sm" onClick={() => setTab('campaigns')} icon={<Calendar className="h-4 w-4" />}>Browse Campaigns</Button>
                       </div>
                     ))}
                   </div>
@@ -480,6 +481,10 @@ export function DonorDashboard() {
       )}
 
       {/* Profile */}
+      {tab === 'campaigns' && profile && <CampaignFinder profile={profile} />}
+      {tab === 'bank_requests' && profile && <ConnectionRequests profile={profile} />}
+      {tab === 'connections' && profile && <Connections profile={profile} />}
+
       {tab === 'profile' && donor && (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">

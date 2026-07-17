@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Activity, Plus, Droplet, AlertTriangle, Clock, Check, X, Send, TrendingUp, Building2, Package, BookOpen } from 'lucide-react';
+import { Activity, Plus, Droplet, AlertTriangle, Clock, Check, X, Send, TrendingUp, Building2, Package, BookOpen, Search, HeartHandshake, MessageSquare } from 'lucide-react';
 import { DashboardLayout } from '../../components/dashboard/DashboardLayout';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -17,8 +17,9 @@ import { BloodInventory, BloodBank, BloodTransfer, BloodGroup } from '../../type
 import { formatDate, BLOOD_GROUPS, daysUntil } from '../../lib/utils';
 import { sendNotification } from '../../lib/notifications';
 import { ContentManager } from '../../components/dashboard/ContentManager';
+import { BankDonorFinder, ConnectionRequests, Connections } from '../../components/dashboard/ApprovedConnections';
 
-type Tab = 'overview' | 'inventory' | 'transfers' | 'content' | 'profile';
+type Tab = 'overview' | 'inventory' | 'transfers' | 'content' | 'profile' | 'donor_matching' | 'connection_requests' | 'connections';
 
 export function BloodBankDashboard() {
   const { profile, signOut } = useAuth();
@@ -135,6 +136,9 @@ export function BloodBankDashboard() {
     { id: 'overview', label: 'Overview', icon: <TrendingUp className="h-4 w-4" /> },
     { id: 'inventory', label: 'Inventory', icon: <Package className="h-4 w-4" /> },
     { id: 'transfers', label: 'Hospital Requests', icon: <Send className="h-4 w-4" />, badge: pendingTransfers.length },
+    { id: 'donor_matching', label: 'Find Donors', icon: <Search className="h-4 w-4" /> },
+    { id: 'connection_requests', label: 'Connection Requests', icon: <HeartHandshake className="h-4 w-4" /> },
+    { id: 'connections', label: 'My Connections', icon: <MessageSquare className="h-4 w-4" /> },
     { id: 'content', label: 'Content Publishing', icon: <BookOpen className="h-4 w-4" /> },
     { id: 'profile', label: 'Bank Profile', icon: <Building2 className="h-4 w-4" /> },
   ];
@@ -307,6 +311,9 @@ export function BloodBankDashboard() {
         </Card>
       )}
 
+      {tab === 'donor_matching' && profile && <BankDonorFinder profile={profile} />}
+      {tab === 'connection_requests' && profile && <ConnectionRequests profile={profile} />}
+      {tab === 'connections' && profile && <Connections profile={profile} />}
       {tab === 'content' && <ContentManager role="blood_bank" />}
 
       {/* Profile */}

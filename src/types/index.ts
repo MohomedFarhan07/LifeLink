@@ -226,6 +226,48 @@ export interface ChatMessage {
   created_at: string;
 }
 
+export type ConnectionKind = 'bank_donor' | 'hospital_bank';
+
+export interface ConnectionRequest {
+  id: string;
+  kind: ConnectionKind;
+  requester_id: string;
+  recipient_id: string;
+  blood_group: BloodGroup;
+  units: number;
+  message: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Connection {
+  id: string;
+  request_id: string;
+  kind: ConnectionKind;
+  participant_one: string;
+  participant_two: string;
+  created_at: string;
+}
+
+export interface ConnectionMessage {
+  id: string;
+  connection_id: string;
+  sender_id: string;
+  recipient_id: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface CampaignParticipant {
+  id: string;
+  campaign_id: string;
+  donor_id: string;
+  status: 'registered' | 'cancelled' | 'attended';
+  created_at: string;
+}
+
 export interface DonorWithProfile extends Donor {
   profiles?: Pick<Profile, 'full_name' | 'email' | 'phone' | 'city' | 'avatar_url'>;
 }
