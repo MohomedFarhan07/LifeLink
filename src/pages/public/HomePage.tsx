@@ -43,7 +43,7 @@ export function HomePage() {
           <div className="animate-slide-up">
             <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
               <Sparkles className="h-3.5 w-3.5" />
-              AI-powered donor matching platform
+              AI-powered Blood Donation Platform
             </div>
             <h1 className="mt-5 text-4xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
               Every drop <span className="text-brand-600">saves a life.</span>
