@@ -1,25 +1,31 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link as RouterLink } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/ui/Toast';
 import { HomePage } from './pages/public/HomePage';
-import { AboutPage } from './pages/public/AboutPage';
-import { AboutUsPage } from './pages/public/AboutUsPage';
-import { AwarenessPage } from './pages/public/AwarenessPage';
-import { StoriesPage } from './pages/public/StoriesPage';
-import { ContactPage } from './pages/public/ContactPage';
-import { NewsPage } from './pages/public/NewsPage';
-import { PublicProfilePage } from './pages/public/PublicProfilePage';
 import { PrivacyPolicyPage, TermsOfServicePage, MedicalDisclaimerPage } from './pages/public/LegalPages';
-import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
-import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
-import { DonorDashboard } from './pages/dashboards/DonorDashboard';
-import { HospitalDashboard } from './pages/dashboards/HospitalDashboard';
-import { BloodBankDashboard } from './pages/dashboards/BloodBankDashboard';
-import { AdminDashboard } from './pages/dashboards/AdminDashboard';
 import { Droplet, Loader2 } from 'lucide-react';
 import type { JSX } from 'react';
+
+const AboutPage = lazy(() => import('./pages/public/AboutPage').then((module) => ({ default: module.AboutPage })));
+const AboutUsPage = lazy(() => import('./pages/public/AboutUsPage').then((module) => ({ default: module.AboutUsPage })));
+const AwarenessPage = lazy(() => import('./pages/public/AwarenessPage').then((module) => ({ default: module.AwarenessPage })));
+const StoriesPage = lazy(() => import('./pages/public/StoriesPage').then((module) => ({ default: module.StoriesPage })));
+const ContactPage = lazy(() => import('./pages/public/ContactPage').then((module) => ({ default: module.ContactPage })));
+const NewsPage = lazy(() => import('./pages/public/NewsPage').then((module) => ({ default: module.NewsPage })));
+const PublicProfilePage = lazy(() => import('./pages/public/PublicProfilePage').then((module) => ({ default: module.PublicProfilePage })));
+const LoginPage = lazy(() => import('./pages/auth/LoginPage').then((module) => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage').then((module) => ({ default: module.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
+const DonorDashboard = lazy(() => import('./pages/dashboards/DonorDashboard').then((module) => ({ default: module.DonorDashboard })));
+const HospitalDashboard = lazy(() => import('./pages/dashboards/HospitalDashboard').then((module) => ({ default: module.HospitalDashboard })));
+const BloodBankDashboard = lazy(() => import('./pages/dashboards/BloodBankDashboard').then((module) => ({ default: module.BloodBankDashboard })));
+const AdminDashboard = lazy(() => import('./pages/dashboards/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
+
+function RouteLoading() {
+  return <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>;
+}
 
 function DashboardRouter() {
   const { profile } = useAuth();
@@ -89,7 +95,7 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
           <BrowserRouter>
-            <Routes>
+            <Suspense fallback={<RouteLoading />}><Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/about-us" element={<AboutUsPage />} />
@@ -106,7 +112,7 @@ export default function App() {
               <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPasswordPage /></PublicOnlyRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
+            </Routes></Suspense>
           </BrowserRouter>
         </ToastProvider>
       </AuthProvider>
