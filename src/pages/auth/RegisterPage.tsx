@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mail, Lock, User, Phone, Droplet, Building2, Activity, Shield, AlertCircle, Check, MapPin, FileText } from 'lucide-react';
+import { Mail, Lock, User, Phone, Droplet, Building2, Activity, Shield, AlertCircle, Check, MapPin, FileText, ChevronDown } from 'lucide-react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { Input, Select } from '../../components/ui/Field';
 import { Button } from '../../components/ui/Button';
@@ -183,9 +183,7 @@ export function RegisterPage() {
               <Input label="Email" type="email" required icon={<Mail className="h-4 w-4" />} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
               <Input label={`Phone number (${getCountry(countryCode).callingCode})`} required icon={<Phone className="h-4 w-4" />} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={getCountry(countryCode).callingCode === '—' ? 'Phone number' : `e.g. ${getCountry(countryCode).callingCode} phone number`} />
               <Input label="Password" type="password" required icon={<Lock className="h-4 w-4" />} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters" />
-              <Select label={`Country — ${getCountry(countryCode).flag} ${getCountry(countryCode).name}`} value={countryCode} onChange={(e) => { const next = getCountry(e.target.value); setCountryCode(next.code); setDistrict(next.districts[0] || ''); }}>
-                {COUNTRIES.map((country) => <option key={country.code} value={country.code}>{country.flag} {country.name}</option>)}
-              </Select>
+              <CountryPicker value={countryCode} onChange={(code) => { const next = getCountry(code); setCountryCode(next.code); setDistrict(next.districts[0] || ''); }} />
               {getCountry(countryCode).districts.length > 0 ? <Select label={getSubdivisionLabel(countryCode)} value={district} onChange={(e) => setDistrict(e.target.value)}>{getCountry(countryCode).districts.map((item) => <option key={item} value={item}>{item}</option>)}</Select> : <Input label={getSubdivisionLabel(countryCode)} required value={district} onChange={(e) => setDistrict(e.target.value)} placeholder={`Enter your ${getSubdivisionLabel(countryCode).toLowerCase()}`} />}
               <Input label="Postal / ZIP code" required value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="00100" />
               <Input label="Address" icon={<MapPin className="h-4 w-4" />} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street address" />
@@ -262,5 +260,21 @@ export function RegisterPage() {
         </button>
       </p>
     </AuthLayout>
+  );
+}
+
+function CountryPicker({ value, onChange }: { value: string; onChange: (code: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = getCountry(value);
+  return (
+    <div className="relative space-y-1.5">
+      <label className="block text-sm font-medium text-slate-700">Country — {selected.flag} {selected.name}</label>
+      <button type="button" onClick={() => setOpen((current) => !current)} aria-haspopup="listbox" aria-expanded={open} className="flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-left text-sm text-slate-900 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20">
+        <span>{selected.flag} {selected.name}</span><ChevronDown className="h-4 w-4 text-slate-400" />
+      </button>
+      {open && <div role="listbox" className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-slate-300 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-800">
+        {COUNTRIES.map((country) => <button key={country.code} type="button" role="option" aria-selected={country.code === value} onClick={() => { onChange(country.code); setOpen(false); }} className={`block w-full px-3.5 py-2 text-left text-sm transition-colors hover:bg-brand-50 hover:text-brand-700 dark:text-slate-100 dark:hover:bg-slate-700 dark:hover:text-white ${country.code === value ? 'bg-brand-50 text-brand-700 dark:bg-slate-700 dark:text-white' : 'text-slate-900'}`}>{country.flag} {country.name}</button>)}
+      </div>}
+    </div>
   );
 }
