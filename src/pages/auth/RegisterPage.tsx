@@ -95,7 +95,7 @@ export function RegisterPage() {
         gender,
         blood_group: bloodGroup,
         emergency_contact: emergencyContact,
-        availability_status: 'available',
+        availability_status: 'unavailable',
         latitude: coords.latitude,
         longitude: coords.longitude,
       });

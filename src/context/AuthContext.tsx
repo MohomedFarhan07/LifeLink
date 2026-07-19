@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       return;
     }
-    setProfile(data as Profile | null);
+    setProfile(data ? { ...(data as Profile), email: data.email.toLowerCase() } : null);
   }, []);
 
   useEffect(() => {
@@ -72,8 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(
     async (email: string, password: string, fullName: string, role: Role, phone: string) => {
+      const normalizedEmail = email.trim().toLowerCase();
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: { data: { full_name: fullName, role, phone } },
       });
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (newUser) {
         const { error: profileError } = await supabase.from('profiles').insert({
           id: newUser.id,
-          email,
+          email: normalizedEmail,
           full_name: fullName,
           role,
           phone,
@@ -98,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     if (error) return { error: error.message };
     return { error: null };
   }, []);

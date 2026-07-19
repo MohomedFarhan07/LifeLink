@@ -21,7 +21,16 @@ function LegalPage({ title, intro, icon, sections, notice }: {
         </div>
       </section>
       <section className="mx-auto max-w-3xl px-4 py-14 sm:px-6 lg:px-8">
-        {notice && <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">{notice}</div>}
+        {notice && <aside className="mb-8 overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 shadow-sm dark:border-amber-900/70 dark:from-amber-950/40 dark:via-slate-900 dark:to-orange-950/30">
+          <div className="flex gap-4 p-5 sm:p-6">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"><ShieldAlert className="h-5 w-5" /></div>
+            <div>
+              <p className="text-sm font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">Important health notice</p>
+              <p className="mt-1.5 text-sm leading-6 text-slate-700 dark:text-slate-200">{notice}</p>
+            </div>
+          </div>
+          <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-300 dark:from-amber-600 dark:via-orange-500 dark:to-amber-500" />
+        </aside>}
         <div className="space-y-8">
           {sections.map((section) => (
             <article key={section.title}>

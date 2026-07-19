@@ -94,6 +94,15 @@ export function HospitalDashboard() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (!profile) return;
+    const channel = supabase.channel(`hospital-dashboard:${profile.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blood_requests', filter: `hospital_id=eq.${profile.id}` }, () => { void loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'donations', filter: `hospital_id=eq.${profile.id}` }, () => { void loadData(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [loadData, profile?.id]);
+
   // AI preview when form changes
   useEffect(() => {
     if (createOpen) {

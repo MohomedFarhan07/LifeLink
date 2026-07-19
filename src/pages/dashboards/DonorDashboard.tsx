@@ -20,6 +20,7 @@ import { CampaignFinder, ConnectionRequests, Connections } from '../../component
 import { PublicProfileLink } from '../../components/shared/PublicProfileLink';
 
 type Tab = 'overview' | 'requests' | 'inbox' | 'history' | 'hospitals' | 'profile' | 'campaigns' | 'bank_requests' | 'connections';
+type DashboardStats = { donations_completed: number; lives_impacted: number; active_requests: number };
 
 const AI_ELIGIBILITY_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:5000'}/api/ai/eligibility`;
 
@@ -43,6 +44,7 @@ export function DonorDashboard() {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<BloodRequest[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({ donations_completed: 0, lives_impacted: 0, active_requests: 0 });
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Donor>>({});
@@ -90,6 +92,10 @@ export function DonorDashboard() {
       .limit(1)
       .maybeSingle();
     setEligibilityStatus(latestEligibility ? Boolean(latestEligibility.ai_eligible) : null);
+    if (latestEligibility?.ai_eligible !== true && d?.availability_status === 'available') {
+      await supabase.from('donors').update({ availability_status: 'unavailable' }).eq('id', d.id);
+      setDonor({ ...(d as Donor), availability_status: 'unavailable' });
+    }
 
     const compatible = d ? compatibleDonorGroups(d.blood_group as BloodGroup) : [];
     const { data: reqs } = await supabase
@@ -98,14 +104,16 @@ export function DonorDashboard() {
       .in('blood_group', compatible.length ? compatible : BLOOD_GROUPS)
       .eq('status', 'open')
       .order('created_at', { ascending: false });
-    setRequests((reqs as BloodRequest[]) || []);
+    const donorRequests = (reqs as BloodRequest[]) || [];
+    setRequests(donorRequests);
 
     const { data: dons } = await supabase
       .from('donations')
       .select('*')
       .eq('donor_id', profile.id)
       .order('created_at', { ascending: false });
-    setDonations((dons as Donation[]) || []);
+    const donorDonations = (dons as Donation[]) || [];
+    setDonations(donorDonations);
 
     const { data: hosp } = await supabase.from('hospitals').select('*').eq('verification_status', 'verified').limit(20);
     setHospitals((hosp as Hospital[]) || []);
@@ -118,6 +126,23 @@ export function DonorDashboard() {
       .order('created_at', { ascending: false });
     const incomingDons = (incoming as Donation[]) || [];
     setIncomingRequests(incomingDons);
+
+    const { data: bankRequestRows } = await supabase
+      .from('connection_requests')
+      .select('id')
+      .eq('recipient_id', profile.id)
+      .eq('kind', 'bank_donor')
+      .eq('status', 'pending');
+
+    const stats: DashboardStats = {
+      donations_completed: donorDonations.filter((donation) => donation.status === 'completed').length,
+      lives_impacted: donorDonations.filter((donation) => donation.status === 'completed').length * 3,
+      // Blood Banks send donor requests through connection_requests. These rows
+      // are addressed specifically to this donor and await their response.
+      active_requests: bankRequestRows?.length || 0,
+    };
+    const { data: savedStats } = await supabase.from('donor_dashboard_stats').upsert({ donor_id: profile.id, ...stats, updated_at: new Date().toISOString() }, { onConflict: 'donor_id' }).select('donations_completed, lives_impacted, active_requests').maybeSingle();
+    setDashboardStats((savedStats as DashboardStats | null) || stats);
 
     const hospitalIds = [...new Set(incomingDons.map((d) => d.hospital_id))];
     if (hospitalIds.length > 0) {
@@ -135,6 +160,15 @@ export function DonorDashboard() {
   }, [loadData]);
 
   useEffect(() => {
+    if (!profile) return;
+    const channel = supabase.channel(`donor-request-stats:${profile.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'connection_requests', filter: `recipient_id=eq.${profile.id}` }, () => { void loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'donations', filter: `donor_id=eq.${profile.id}` }, () => { void loadData(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [loadData, profile?.id]);
+
+  useEffect(() => {
     if (!donor) return;
     setHealthScreen((current) => ({
       ...current,
@@ -147,6 +181,10 @@ export function DonorDashboard() {
 
   const toggleAvailability = async () => {
     if (!donor) return;
+    if (eligibilityStatus !== true) {
+      toast('Complete an eligible donation check before changing availability.', 'error');
+      return;
+    }
     const next = donor.availability_status === 'available' ? 'unavailable' : 'available';
     await supabase.from('donors').update({ availability_status: next }).eq('id', donor.id);
     setDonor({ ...donor, availability_status: next });
@@ -171,12 +209,14 @@ export function DonorDashboard() {
       toast('Request declined.');
     }
     setRequests((prev) => prev.filter((r) => r.id !== req.id));
+    void loadData();
   };
 
   const respondToIncoming = async (don: Donation, accept: boolean) => {
     if (!profile) return;
     if (accept) {
       await supabase.from('donations').update({ status: 'accepted', donation_date: new Date().toISOString().split('T')[0] }).eq('id', don.id);
+      if (don.request_id) await supabase.from('blood_requests').update({ status: 'matched' }).eq('id', don.request_id);
       await sendNotification(don.hospital_id, 'match', 'Donor accepted your request', `A donor (${profile.full_name}) accepted your ${don.blood_group} blood donation request. You can now chat to coordinate.`, '/dashboard');
       toast('Request accepted! You can now chat with the hospital.');
       setActiveChat({ ...don, status: 'accepted' });
@@ -185,10 +225,12 @@ export function DonorDashboard() {
       toast('Request declined.');
     }
     setIncomingRequests((prev) => prev.map((d) => (d.id === don.id ? { ...d, status: accept ? 'accepted' : 'rejected' } : d)));
+    void loadData();
   };
 
   const completeDonation = async (don: Donation) => {
     await supabase.from('donations').update({ status: 'completed' }).eq('id', don.id);
+    if (don.request_id) await supabase.from('blood_requests').update({ status: 'fulfilled' }).eq('id', don.request_id);
     if (profile) {
       await supabase.from('donors').update({ last_donation_date: new Date().toISOString().split('T')[0] }).eq('user_id', profile.id);
     }
@@ -287,9 +329,9 @@ export function DonorDashboard() {
   };
 
   const openEligibilityCheck = () => {
-    // A saved negative assessment is informational only. Donors must contact a
-    // blood bank or clinician instead of immediately starting another check.
-    if (eligibilityStatus === false) return;
+    // A saved assessment is informational only. It must not immediately reopen
+    // the screening form, regardless of whether the result is eligible or not.
+    if (eligibilityStatus !== null) return;
     setEligibilityResult(null);
     setEligibilityOpen(true);
   };
@@ -313,7 +355,6 @@ export function DonorDashboard() {
 
   if (loading) return <DashboardLayout><div className="h-64 animate-pulse rounded-xl bg-slate-100" /></DashboardLayout>;
 
-  const completedDonations = donations.filter((d) => d.status === 'completed');
   const eligible = donor?.last_donation_date ? daysUntil(donor.last_donation_date) <= -56 : true;
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
@@ -336,7 +377,7 @@ export function DonorDashboard() {
         {donor && (
           <div className="flex items-center gap-3">
             <BloodGroupBadge group={donor.blood_group} />
-            <Button variant={donor.availability_status === 'available' ? 'success' : 'outline'} onClick={toggleAvailability} icon={<Activity className="h-4 w-4" />}>
+            <Button variant={donor.availability_status === 'available' ? 'success' : 'outline'} onClick={toggleAvailability} disabled={eligibilityStatus !== true} title={eligibilityStatus === true ? 'Change donation availability' : 'Complete an eligible donation check to change availability'} icon={<Activity className="h-4 w-4" />}>
               {donor.availability_status === 'available' ? 'Available' : 'Unavailable'}
             </Button>
           </div>
@@ -369,9 +410,9 @@ export function DonorDashboard() {
       {tab === 'overview' && (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Donations Completed" value={completedDonations.length} icon={<Heart className="h-5 w-5" />} accent="brand" />
-            <StatCard label="Lives Impacted" value={completedDonations.length * 3} icon={<Award className="h-5 w-5" />} accent="emerald" />
-            <StatCard label="Active Requests" value={requests.length} icon={<Bell className="h-5 w-5" />} accent="amber" />
+            <StatCard label="Donations Completed" value={dashboardStats.donations_completed} icon={<Heart className="h-5 w-5" />} accent="brand" />
+            <StatCard label="Lives Impacted" value={dashboardStats.lives_impacted} icon={<Award className="h-5 w-5" />} accent="emerald" />
+            <StatCard label="Active Requests" value={dashboardStats.active_requests} icon={<Bell className="h-5 w-5" />} accent="amber" />
             <button disabled={eligibilityStatus === false} onClick={openEligibilityCheck} className={`rounded-xl border p-5 text-left transition hover:shadow-sm disabled:cursor-default ${eligibilityStatus === true ? 'border-emerald-200 bg-emerald-50 hover:border-emerald-400 dark:border-emerald-900 dark:bg-emerald-950/30' : eligibilityStatus === false ? 'border-rose-200 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/30' : 'border-sky-200 bg-sky-50 hover:border-sky-400 dark:border-rose-900 dark:bg-rose-950/30'}`}>
               <div className="flex items-center justify-between"><p className="text-sm font-medium text-slate-600 dark:text-slate-300">Eligibility</p><ClipboardCheck className={`h-5 w-5 ${eligibilityStatus === true ? 'text-emerald-600' : eligibilityStatus === false ? 'text-rose-600' : 'text-sky-600'}`} /></div>
               <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{eligibilityStatus === true ? 'Eligible' : eligibilityStatus === false ? 'Not eligible' : 'Check eligibility'}</p>
@@ -640,7 +681,7 @@ export function DonorDashboard() {
             <CardHeader title="Donor Profile" subtitle="Your medical and contact information" icon={<User className="h-5 w-5" />} action={<Button size="sm" variant="outline" onClick={() => { setEditForm(donor); setEditOpen(true); }} icon={<Edit3 className="h-4 w-4" />}>Edit</Button>} />
             <div className="grid gap-4 p-5 sm:grid-cols-2">
               <Field label="Full Name" value={profile?.full_name || '—'} />
-              <Field label="Email" value={profile?.email || '—'} />
+              <Field label="Email" value={profile?.email?.toLowerCase() || '—'} />
               <Field label="Phone" value={profile?.phone || '—'} />
               <Field label="NIC / ID" value={donor.nic_number || '—'} />
               <Field label="Date of Birth" value={formatDate(donor.date_of_birth)} />

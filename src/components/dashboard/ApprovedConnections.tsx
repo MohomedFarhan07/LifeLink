@@ -7,6 +7,7 @@ import { Card, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input, Select } from '../ui/Field';
 import { EmptyState } from '../ui/EmptyState';
+import { Modal } from '../ui/Modal';
 import { BloodGroupBadge } from '../shared/Badges';
 import { useToast } from '../ui/Toast';
 import { PublicProfileLink } from '../shared/PublicProfileLink';
@@ -14,6 +15,10 @@ import { PublicProfileLink } from '../shared/PublicProfileLink';
 function ConnectionChat({ connection, currentUser, recipient }: { connection: Connection; currentUser: Profile; recipient: Profile }) {
   const [messages, setMessages] = useState<ConnectionMessage[]>([]);
   const [text, setText] = useState('');
+  const [donationCompleted, setDonationCompleted] = useState(false);
+  const [completingDonation, setCompletingDonation] = useState(false);
+  const { toast } = useToast();
+  const canCompleteDonation = connection.kind === 'bank_donor' && currentUser.role === 'blood_bank' && recipient.role === 'donor';
   const load = useCallback(async () => {
     const { data } = await supabase.from('connection_messages').select('*').eq('connection_id', connection.id).order('created_at');
     setMessages((data as ConnectionMessage[]) || []);
@@ -26,14 +31,31 @@ function ConnectionChat({ connection, currentUser, recipient }: { connection: Co
     }).subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [connection.id, load]);
+  useEffect(() => {
+    if (!canCompleteDonation) return;
+    void (async () => {
+      const { data } = await supabase.from('donations').select('id').eq('donor_id', recipient.id).eq('hospital_id', currentUser.id).eq('notes', `Bank connection ${connection.id}`).eq('status', 'completed').maybeSingle();
+      setDonationCompleted(!!data);
+    })();
+  }, [canCompleteDonation, connection.id, currentUser.id, recipient.id]);
   const send = async () => {
     const body = text.trim();
     if (!body) return;
     setText('');
     await supabase.from('connection_messages').insert({ connection_id: connection.id, sender_id: currentUser.id, recipient_id: recipient.id, body });
   };
+  const completeDonation = async () => {
+    if (!canCompleteDonation || donationCompleted) return;
+    setCompletingDonation(true);
+    const { data: request, error: requestError } = await supabase.from('connection_requests').select('blood_group').eq('id', connection.request_id).maybeSingle();
+    if (requestError || !request) { toast('Could not find the donation request.', 'error'); setCompletingDonation(false); return; }
+    const { error } = await supabase.from('donations').insert({ donor_id: recipient.id, hospital_id: currentUser.id, blood_group: request.blood_group, donation_date: new Date().toISOString().slice(0, 10), status: 'completed', notes: `Bank connection ${connection.id}` });
+    if (error) toast(`Could not record the donation: ${error.message}`, 'error');
+    else { setDonationCompleted(true); toast(`Donation for ${recipient.full_name} recorded as completed.`); }
+    setCompletingDonation(false);
+  };
   return <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-700">
-    <CardHeader title={`Chat with ${recipient.full_name}`} subtitle={connection.kind === 'bank_donor' ? 'Approved blood-donation connection' : 'Approved blood-transfer connection'} icon={<MessageSquare className="h-5 w-5" />} />
+    <CardHeader title={`Chat with ${recipient.full_name}`} subtitle={connection.kind === 'bank_donor' ? 'Approved blood-donation connection' : 'Approved blood-transfer connection'} icon={<MessageSquare className="h-5 w-5" />} action={canCompleteDonation ? <Button size="sm" variant={donationCompleted ? 'success' : 'primary'} disabled={donationCompleted || completingDonation} loading={completingDonation} onClick={() => void completeDonation()} icon={<Check className="h-4 w-4" />}>{donationCompleted ? 'Donation completed' : 'Mark donation completed'}</Button> : undefined} />
     <div className="h-96 space-y-4 overflow-y-auto bg-gradient-to-b from-slate-50 to-white p-4 dark:from-slate-900 dark:to-slate-950">
       {messages.length === 0 ? <EmptyState icon={<MessageSquare className="h-6 w-6" />} title="Start the conversation" description="This private chat became available after the request was accepted." /> : messages.map((message) => {
         const mine = message.sender_id === currentUser.id;
@@ -109,11 +131,33 @@ export function Connections({ profile, openConnectionId }: { profile: Profile; o
 }
 
 export function CampaignFinder({ profile }: { profile: Profile }) {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]); const [joined, setJoined] = useState<Set<string>>(new Set()); const [query, setQuery] = useState('');
-  useEffect(() => { (async () => { const [{ data: campaignRows }, { data: participantRows }] = await Promise.all([supabase.from('campaigns').select('*').in('status', ['upcoming', 'active']).order('event_date'), supabase.from('campaign_participants').select('campaign_id').eq('donor_id', profile.id)]); setCampaigns((campaignRows as Campaign[]) || []); setJoined(new Set(((participantRows as Pick<CampaignParticipant, 'campaign_id'>[]) || []).map((item) => item.campaign_id))); })(); }, [profile.id]);
-  const visible = useMemo(() => { const term = query.trim().toLowerCase(); return campaigns.filter((campaign) => !term || [campaign.title, campaign.description, campaign.location].join(' ').toLowerCase().includes(term)); }, [campaigns, query]);
-  const join = async (campaign: Campaign) => { const { error } = await supabase.from('campaign_participants').insert({ campaign_id: campaign.id, donor_id: profile.id }); if (!error) setJoined((current) => new Set(current).add(campaign.id)); };
-  return <Card><CardHeader title="Find Donation Campaigns" subtitle="Search local campaigns and register to participate." icon={<Search className="h-5 w-5" />} /><div className="p-5"><Input icon={<Search className="h-4 w-4" />} placeholder="Search campaigns by name or location..." value={query} onChange={(event) => setQuery(event.target.value)} /><div className="mt-5 grid gap-4 md:grid-cols-2">{visible.map((campaign) => <div key={campaign.id} className="rounded-xl border border-slate-200 p-4"><p className="text-sm font-semibold text-slate-900">{campaign.title}</p><p className="mt-1 line-clamp-2 text-xs text-slate-500">{campaign.description}</p><p className="mt-3 flex items-center gap-1 text-xs text-slate-500"><MapPin className="h-3.5 w-3.5" />{campaign.location} · {formatDate(campaign.event_date)}</p><Button size="sm" className="mt-4" variant={joined.has(campaign.id) ? 'success' : 'primary'} disabled={joined.has(campaign.id)} onClick={() => void join(campaign)}>{joined.has(campaign.id) ? 'Registered' : 'Participate'}</Button></div>)}</div>{visible.length === 0 && <EmptyState icon={<Search className="h-6 w-6" />} title="No campaigns found" description="Try another location or keyword." />}</div></Card>;
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [joined, setJoined] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState('');
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      const [{ data: campaignRows }, { data: participantRows }] = await Promise.all([
+        supabase.from('campaigns').select('*').in('status', ['upcoming', 'active']).order('event_date'),
+        supabase.from('campaign_participants').select('campaign_id').eq('donor_id', profile.id),
+      ]);
+      setCampaigns((campaignRows as Campaign[]) || []);
+      setJoined(new Set(((participantRows as Pick<CampaignParticipant, 'campaign_id'>[]) || []).map((item) => item.campaign_id)));
+    })();
+  }, [profile.id]);
+
+  const visible = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return campaigns.filter((campaign) => !term || [campaign.title, campaign.description, campaign.location].join(' ').toLowerCase().includes(term));
+  }, [campaigns, query]);
+
+  const join = async (campaign: Campaign) => {
+    const { error } = await supabase.from('campaign_participants').insert({ campaign_id: campaign.id, donor_id: profile.id });
+    if (!error) setJoined((current) => new Set(current).add(campaign.id));
+  };
+
+  return <><Card><CardHeader title="Find Donation Campaigns" subtitle="Select a campaign to read its details, then register to participate." icon={<Search className="h-5 w-5" />} /><div className="p-5"><Input icon={<Search className="h-4 w-4" />} placeholder="Search campaigns by name or location..." value={query} onChange={(event) => setQuery(event.target.value)} /><div className="mt-5 grid gap-4 md:grid-cols-2">{visible.map((campaign) => <div key={campaign.id} role="button" tabIndex={0} onClick={() => setSelectedCampaign(campaign)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') setSelectedCampaign(campaign); }} className="cursor-pointer rounded-xl border border-slate-200 p-4 transition hover:border-brand-300 hover:bg-brand-50/30 hover:shadow-sm"><p className="text-sm font-semibold text-slate-900">{campaign.title}</p><p className="mt-1 line-clamp-2 text-xs text-slate-500">{campaign.description}</p><p className="mt-3 flex items-center gap-1 text-xs text-slate-500"><MapPin className="h-3.5 w-3.5" />{campaign.location} · {formatDate(campaign.event_date)}</p><div className="mt-4 flex items-center justify-between gap-3"><span className="text-xs font-medium text-brand-700">View campaign brief</span><Button size="sm" variant={joined.has(campaign.id) ? 'success' : 'primary'} disabled={joined.has(campaign.id)} onClick={(event) => { event.stopPropagation(); void join(campaign); }}>{joined.has(campaign.id) ? 'Registered' : 'Participate'}</Button></div></div>)}</div>{visible.length === 0 && <EmptyState icon={<Search className="h-6 w-6" />} title="No campaigns found" description="Try another location or keyword." />}</div></Card><Modal open={!!selectedCampaign} onClose={() => setSelectedCampaign(null)} title={selectedCampaign?.title || 'Campaign details'} subtitle={selectedCampaign ? `${selectedCampaign.location} · ${formatDate(selectedCampaign.event_date)}` : ''} size="md" footer={<Button onClick={() => setSelectedCampaign(null)}>Close</Button>}>{selectedCampaign && <div className="space-y-4">{selectedCampaign.image_url && <img src={selectedCampaign.image_url} alt="" className="h-44 w-full rounded-xl object-cover" />}<p className="text-sm leading-7 text-slate-700">{selectedCampaign.description}</p><div className="rounded-xl bg-brand-50 p-4 text-sm text-brand-900"><p className="font-semibold">Donation goal</p><p className="mt-1">This campaign aims to collect {selectedCampaign.goal_units} unit{selectedCampaign.goal_units === 1 ? '' : 's'} of blood.</p></div></div>}</Modal></>;
 }
 
 export function BankDonorFinder({ profile }: { profile: Profile }) {

@@ -282,3 +282,52 @@ html * {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
 }
+
+/* The disabled Not eligible eligibility card keeps its status colour in the
+   background and icon, but should not look like an error input field. */
+button.disabled\:cursor-default:disabled {
+  border-color: #e2e8f0;
+}
+
+.dark button.disabled\:cursor-default:disabled {
+  border-color: #334155;
+}
+
+/* The initial "Check eligibility" overview card has no status yet, so keep
+   its dark-mode outline neutral instead of inheriting a red error border. */
+.dark button.border-sky-200 {
+  border-color: transparent;
+}
+
+/* Eligibility-check progress message: keep the text legible in both themes. */
+[role="status"] {
+  border-color: #bae6fd !important;
+  background: #f0f9ff !important;
+  color: #0c4a6e !important;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(14, 116, 144, 0.08);
+}
+
+.dark [role="status"] {
+  border-color: #0369a1 !important;
+  background: rgba(7, 89, 133, 0.28) !important;
+  color: #e0f2fe !important;
+}
+
+/* A completed eligibility result is read-only; neither result card opens a
+   second screening form. These colour classes are unique to that card. */
+button.bg-emerald-50,
+button.bg-rose-50 {
+  pointer-events: none;
+  cursor: default;
+}
+
+/* The saved Eligible card is read-only, so replace its old retry prompt. */
+button.bg-emerald-50 p.mt-1 {
+  font-size: 0;
+}
+
+button.bg-emerald-50 p.mt-1::after {
+  content: "Eligibility result saved";
+  font-size: 0.75rem;
+}

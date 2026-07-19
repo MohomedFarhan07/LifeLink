@@ -80,6 +80,15 @@ export function BloodBankDashboard() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (!profile) return;
+    const channel = supabase.channel(`blood-bank-dashboard:${profile.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blood_inventory', filter: `bank_id=eq.${profile.id}` }, () => { void loadData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blood_transfers', filter: `bank_id=eq.${profile.id}` }, () => { void loadData(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [loadData, profile?.id]);
+
   const addInventory = async () => {
     if (!profile || !bank) return;
     const { error } = await supabase.from('blood_inventory').insert({
