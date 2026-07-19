@@ -140,7 +140,7 @@ Return only the finished article, not a greeting or an explanation of your proce
     { type: 'story', title: 'Success Stories', subtitle: 'Share positive donation outcomes', icon: <Heart className="h-5 w-5" />, items: stories },
   ];
 
-  return <div className="grid gap-6 lg:grid-cols-2">{lists.map((list) => <Card key={list.type} className={list.type === 'story' && role === 'hospital' ? 'lg:col-span-2' : ''}>
+  return <div className="grid gap-6 xl:grid-cols-2">{lists.map((list) => <Card key={list.type} className={list.type === 'story' && role === 'hospital' ? 'xl:col-span-2' : ''}>
     <CardHeader title={list.title} subtitle={list.subtitle} icon={list.icon} action={<Button size="sm" onClick={() => openEditor(list.type)} icon={<Plus className="h-4 w-4" />}>Create</Button>} />
     <div className="p-5">{list.items.length === 0 ? <EmptyState icon={list.icon} title={`No ${list.title.toLowerCase()} yet`} description="Create your first item to publish it on LifeLink." /> : <div className="space-y-3">{list.items.map((item) => <div key={item.id} className="flex items-start gap-3 rounded-lg border border-slate-100 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-900">{item.title}</p><p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.description}</p></div><button onClick={() => openEditor(list.type, item)} className="p-1.5 text-slate-400 hover:text-brand-600"><Edit3 className="h-4 w-4" /></button><button onClick={() => remove(list.type, item.id)} className="p-1.5 text-slate-400 hover:text-brand-600"><Trash2 className="h-4 w-4" /></button></div>)}</div>}</div>
   </Card>)}

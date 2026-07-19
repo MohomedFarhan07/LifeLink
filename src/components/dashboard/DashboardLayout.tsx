@@ -82,9 +82,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   if (!profile) return null;
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen overflow-x-hidden bg-slate-50">
       {/* Sidebar - desktop */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r border-slate-200 bg-white transition-transform duration-200 lg:translate-x-0 ${
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r border-slate-200 bg-white transition-transform duration-200 xl:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
@@ -94,7 +94,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
             <span className="text-lg font-bold text-slate-900">Life<span className="text-brand-600">Link</span></span>
           </Link>
-          <button onClick={() => setSidebarOpen(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 lg:hidden">
+          <button onClick={() => setSidebarOpen(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 xl:hidden">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -138,14 +138,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Overlay for mobile */}
-      {sidebarOpen && <div className="fixed inset-0 z-40 bg-slate-900/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="fixed inset-0 z-40 bg-slate-900/50 xl:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main */}
-      <div className="flex flex-1 flex-col lg:pl-64">
+      <div className="flex min-w-0 flex-1 flex-col xl:pl-64">
         {/* Topbar */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden">
+            <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 xl:hidden">
               <Menu className="h-5 w-5" />
             </button>
             <h1 className="text-base font-semibold text-slate-900 sm:text-lg">{roleLabels[role]} Dashboard</h1>
@@ -205,7 +205,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 p-4 sm:p-6 xl:p-8">
           <div className="mx-auto max-w-7xl animate-fade-in">{children}</div>
         </main>
       </div>

@@ -180,10 +180,10 @@ export function HospitalAnalytics({ hospitalId }: { hospitalId: string }) {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[...Array(4)].map((_, i) => <div key={i} className="h-28 animate-pulse rounded-xl bg-slate-100" />)}
         </div>
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-2">
           {[...Array(4)].map((_, i) => <div key={i} className="h-72 animate-pulse rounded-xl bg-slate-100" />)}
         </div>
       </div>
@@ -205,7 +205,7 @@ export function HospitalAnalytics({ hospitalId }: { hospitalId: string }) {
       </div>
 
       {/* Stat cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total Blood Requested" value={`${totalBloodRequested} units`} icon={<Droplet className="h-5 w-5" />} accent="brand" />
         <StatCard label="Total Blood Used" value={`${totalBloodUsed} units`} icon={<Activity className="h-5 w-5" />} accent="sky" />
         <StatCard label="Open Organ Requests" value={openOrganRequests} icon={<Heart className="h-5 w-5" />} accent="amber" />
@@ -213,7 +213,7 @@ export function HospitalAnalytics({ hospitalId }: { hospitalId: string }) {
       </div>
 
       {/* Charts row 1: Monthly trend + Blood requests by group */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader title="Blood Requests Trend" subtitle="Last 6 months" icon={<TrendingUp className="h-5 w-5" />} />
           <div className="p-5">
@@ -237,7 +237,7 @@ export function HospitalAnalytics({ hospitalId }: { hospitalId: string }) {
       </div>
 
       {/* Charts row 2: Organ distribution + Request status */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader title="Organ Requests Distribution" subtitle="By organ type" icon={<PieChart className="h-5 w-5" />} />
           <div className="p-5">
@@ -261,7 +261,7 @@ export function HospitalAnalytics({ hospitalId }: { hospitalId: string }) {
       </div>
 
       {/* Charts row 3: Usage by department + Patient outcomes */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader title="Blood Usage by Department" subtitle="Units consumed per department" icon={<Building2 className="h-5 w-5" />} />
           <div className="p-5">
@@ -285,7 +285,7 @@ export function HospitalAnalytics({ hospitalId }: { hospitalId: string }) {
       </div>
 
       {/* Tables: Organ requests + Recent blood usage */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader
             title="Organ Requests"

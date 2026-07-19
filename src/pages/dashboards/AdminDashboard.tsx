@@ -232,12 +232,12 @@ export function AdminDashboard() {
         <p className="mt-1 text-sm text-slate-500">Manage users, verify organizations, and monitor platform analytics.</p>
       </div>
 
-      <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
+        <div className="dashboard-tabs mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+            className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
               tab === t.id ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -250,21 +250,21 @@ export function AdminDashboard() {
       {/* Overview / Analytics */}
       {tab === 'overview' && (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Registered Donors" value={donorsCount} icon={<Droplet className="h-5 w-5" />} accent="brand" />
             <StatCard label="Hospitals" value={hospitalsCount} icon={<Building2 className="h-5 w-5" />} accent="sky" />
             <StatCard label="Successful Donations" value={completedDonations} icon={<Heart className="h-5 w-5" />} accent="emerald" />
             <StatCard label="Active Emergency Requests" value={activeRequests} icon={<AlertTriangle className="h-5 w-5" />} accent="amber" />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Blood Banks" value={banksCount} icon={<Activity className="h-5 w-5" />} accent="emerald" />
             <StatCard label="Pending Verifications" value={pendingVerifications} icon={<Shield className="h-5 w-5" />} accent="brand" />
             <StatCard label="Total Users" value={users.length} icon={<Users className="h-5 w-5" />} accent="slate" />
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
+          <div className="grid gap-6 xl:grid-cols-3">
+            <Card className="xl:col-span-2">
               <CardHeader title="Blood Group Statistics" subtitle="Distribution of blood requests by group" icon={<Droplet className="h-5 w-5" />} />
               <div className="p-5">
                 <BarChart data={bloodGroupData} unit="" />
@@ -278,8 +278,8 @@ export function AdminDashboard() {
             </Card>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
+          <div className="grid gap-6 xl:grid-cols-3">
+            <Card className="xl:col-span-2">
               <CardHeader title="Donations Over Time" subtitle="Last 6 months" icon={<TrendingUp className="h-5 w-5" />} />
               <div className="p-5">
                 <LineChart data={monthData} />
@@ -427,7 +427,7 @@ export function AdminDashboard() {
 
       {/* Content management */}
       {tab === 'content' && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-2">
           <Card>
             <CardHeader title="Awareness Articles" subtitle={`${awareness.length} articles`} icon={<BookOpen className="h-5 w-5" />} />
             <div className="p-5">
@@ -468,7 +468,7 @@ export function AdminDashboard() {
               )}
             </div>
           </Card>
-          <Card className="lg:col-span-2">
+          <Card className="xl:col-span-2">
             <CardHeader
               title="Frequently Asked Questions"
               subtitle={`${faqs.length} published FAQs`}

@@ -384,7 +384,7 @@ export function DonorDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
+        <div className="dashboard-tabs mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -392,7 +392,7 @@ export function DonorDashboard() {
               setTab(t.id);
               if (t.id === 'connections') setOpenConnectionId(null);
             }}
-            className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+            className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
               tab === t.id ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -408,7 +408,7 @@ export function DonorDashboard() {
       {/* Overview */}
       {tab === 'overview' && (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Donations Completed" value={dashboardStats.donations_completed} icon={<Heart className="h-5 w-5" />} accent="brand" />
             <StatCard label="Lives Impacted" value={dashboardStats.lives_impacted} icon={<Award className="h-5 w-5" />} accent="emerald" />
             <StatCard label="Active Requests" value={dashboardStats.active_requests} icon={<Bell className="h-5 w-5" />} accent="amber" />
@@ -419,8 +419,8 @@ export function DonorDashboard() {
             </button>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
+          <div className="grid gap-6 xl:grid-cols-3">
+            <Card className="xl:col-span-2">
               <CardHeader title="Donation Campaigns" subtitle="Join blood-donation campaigns near you" icon={<Calendar className="h-5 w-5" />} />
               <div className="p-5">
                 {requests.length === 0 ? (
@@ -675,8 +675,8 @@ export function DonorDashboard() {
       {tab === 'connections' && profile && <Connections profile={profile} openConnectionId={openConnectionId} />}
 
       {tab === 'profile' && donor && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+        <div className="grid gap-6 xl:grid-cols-3">
+          <Card className="xl:col-span-2">
             <CardHeader title="Donor Profile" subtitle="Your medical and contact information" icon={<User className="h-5 w-5" />} action={<Button size="sm" variant="outline" onClick={() => { setEditForm(donor); setEditOpen(true); }} icon={<Edit3 className="h-4 w-4" />}>Edit</Button>} />
             <div className="grid gap-4 p-5 sm:grid-cols-2">
               <Field label="Full Name" value={profile?.full_name || '—'} />

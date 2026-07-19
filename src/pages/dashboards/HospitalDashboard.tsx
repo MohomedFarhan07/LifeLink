@@ -250,12 +250,12 @@ export function HospitalDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
+        <div className="dashboard-tabs mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+            className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
               tab === t.id ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -268,7 +268,7 @@ export function HospitalDashboard() {
       {/* Overview */}
       {tab === 'overview' && (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Active Requests" value={openRequests.length} icon={<Bell className="h-5 w-5" />} accent="brand" />
             <StatCard label="Total Requests" value={requests.length} icon={<FileText className="h-5 w-5" />} accent="sky" />
             <StatCard label="Donations Received" value={completedDonations.length} icon={<Droplet className="h-5 w-5" />} accent="emerald" />
@@ -501,8 +501,8 @@ export function HospitalDashboard() {
 
       {/* Profile */}
       {tab === 'profile' && hospital && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+        <div className="grid gap-6 xl:grid-cols-3">
+          <Card className="xl:col-span-2">
             <CardHeader title="Hospital Information" icon={<Building2 className="h-5 w-5" />} />
             <div className="grid gap-4 p-5 sm:grid-cols-2">
               <InfoField label="Hospital Name" value={hospital.hospital_name} />

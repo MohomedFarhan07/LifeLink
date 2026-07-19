@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keeps the dashboard section navigation usable on small screens. */
+.dashboard-tabs {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-width: thin;
+}
+
+.dashboard-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.dashboard-tabs::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark .dashboard-tabs {
+  scrollbar-color: #475569 transparent;
+}
+
+.dark .dashboard-tabs::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
 :root {
   --ll-red: #dc2626;
   color-scheme: light;

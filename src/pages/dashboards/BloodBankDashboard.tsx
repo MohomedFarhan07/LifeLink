@@ -167,9 +167,9 @@ export function BloodBankDashboard() {
   return (
     <DashboardLayout>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">{bank?.bank_name || profile?.full_name}</h2>
-          <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
+        <div className="min-w-0">
+          <h2 className="break-words text-2xl font-bold text-slate-900">{bank?.bank_name || profile?.full_name}</h2>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
             {bank && <VerificationBadge status={bank.verification_status} />}
             <span>{bank?.location}</span>
           </p>
@@ -177,7 +177,7 @@ export function BloodBankDashboard() {
         <Button onClick={() => setAddOpen(true)} icon={<Plus className="h-4 w-4" />}>Add Blood Unit</Button>
       </div>
 
-      <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
+        <div className="dashboard-tabs mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -185,7 +185,7 @@ export function BloodBankDashboard() {
               setTab(t.id);
               if (t.id === 'connections') setOpenConnectionId(null);
             }}
-            className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+            className={`relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
               tab === t.id ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -198,14 +198,14 @@ export function BloodBankDashboard() {
       {/* Overview */}
       {tab === 'overview' && (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total Units" value={totalUnits} icon={<Droplet className="h-5 w-5" />} accent="brand" />
             <StatCard label="Expiring Soon" value={expiringSoon.length} icon={<Clock className="h-5 w-5" />} accent="amber" />
             <StatCard label="Expired" value={expired.length} icon={<AlertTriangle className="h-5 w-5" />} accent="brand" />
             <StatCard label="Pending Requests" value={pendingTransfers.length} icon={<Send className="h-5 w-5" />} accent="sky" />
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-2">
             <Card>
               <CardHeader title="Blood Group Distribution" subtitle="Units in stock by blood group" icon={<Activity className="h-5 w-5" />} />
               <div className="p-5">
@@ -251,12 +251,12 @@ export function BloodBankDashboard() {
       {tab === 'inventory' && (
         <Card>
           <CardHeader title="Blood Inventory" subtitle="Manage available blood units" icon={<Package className="h-5 w-5" />} action={<Button size="sm" onClick={() => setAddOpen(true)} icon={<Plus className="h-4 w-4" />}>Add Unit</Button>} />
-          <div className="p-5">
+          <div className="p-4 sm:p-5">
             {inventory.length === 0 ? (
               <EmptyState icon={<Package className="h-6 w-6" />} title="No inventory yet" description="Add blood units to your inventory to start managing stock." action={<Button onClick={() => setAddOpen(true)} icon={<Plus className="h-4 w-4" />}>Add Blood Unit</Button>} />
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="min-w-[640px] w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
                       <th className="pb-3 pr-4">Blood Group</th>
@@ -305,7 +305,7 @@ export function BloodBankDashboard() {
       {tab === 'transfers' && (
         <Card>
           <CardHeader title="Hospital Blood Requests" subtitle="Review a hospital's requested blood type and units. Approval reserves that exact inventory immediately." icon={<Send className="h-5 w-5" />} />
-          <div className="p-5">
+          <div className="p-4 sm:p-5">
             {transfers.length === 0 ? (
               <EmptyState icon={<Send className="h-6 w-6" />} title="No hospital blood requests" description="Requests submitted against your available inventory will appear here." />
             ) : (
@@ -315,9 +315,9 @@ export function BloodBankDashboard() {
                   const hospitalName = hospitalProfiles[t.hospital_id]?.full_name || 'Hospital';
                   const canFulfil = Boolean(inventoryItem && inventoryItem.status === 'available' && inventoryItem.units >= t.units);
                   return <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
                       <BloodGroupBadge group={t.blood_group} size="lg" />
-                      <div className="flex-1">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-slate-900"><PublicProfileLink userId={t.hospital_id} role="hospital" label={hospitalName} /> requests {t.units} unit(s)</p>
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
                           <span>Requested {formatDate(t.created_at)}</span>
@@ -327,7 +327,7 @@ export function BloodBankDashboard() {
                       </div>
                       <StatusBadge status={t.status} />
                       {t.status === 'requested' && (
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant="success" disabled={!canFulfil} onClick={() => approveTransfer(t)} icon={<Check className="h-4 w-4" />}>{canFulfil ? 'Approve & Reserve' : 'Insufficient stock'}</Button>
                           <Button size="sm" variant="outline" onClick={() => rejectTransfer(t)} icon={<X className="h-4 w-4" />}>Reject</Button>
                         </div>
@@ -348,10 +348,10 @@ export function BloodBankDashboard() {
 
       {/* Profile */}
       {tab === 'profile' && bank && (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+        <div className="grid gap-6 xl:grid-cols-3">
+          <Card className="xl:col-span-2">
             <CardHeader title="Blood Bank Information" icon={<Building2 className="h-5 w-5" />} />
-            <div className="grid gap-4 p-5 sm:grid-cols-2">
+            <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
               <InfoField label="Bank Name" value={bank.bank_name} />
               <InfoField label="License Number" value={bank.license_number} />
               <InfoField label="Contact" value={bank.contact_number} />
@@ -361,7 +361,7 @@ export function BloodBankDashboard() {
           </Card>
           <Card>
             <CardHeader title="Account" icon={<Building2 className="h-5 w-5" />} />
-            <div className="space-y-4 p-5">
+            <div className="space-y-4 p-4 sm:p-5">
               <div className="flex flex-col items-center text-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
                   <Activity className="h-9 w-9" />
