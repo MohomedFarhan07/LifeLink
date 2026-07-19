@@ -22,7 +22,7 @@ import { PublicProfileLink } from '../../components/shared/PublicProfileLink';
 type Tab = 'overview' | 'requests' | 'inbox' | 'history' | 'hospitals' | 'profile' | 'campaigns' | 'bank_requests' | 'connections';
 type DashboardStats = { donations_completed: number; lives_impacted: number; active_requests: number };
 
-const AI_ELIGIBILITY_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:5000'}/api/ai/eligibility`;
+const AI_ELIGIBILITY_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'https://bold-consultation-handmade-joint.trycloudflare.com'}/api/ai/eligibility`;
 
 const calculateAge = (dateOfBirth: string | null | undefined) => {
   if (!dateOfBirth) return '';

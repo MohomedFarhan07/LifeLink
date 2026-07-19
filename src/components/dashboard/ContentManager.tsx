@@ -15,7 +15,7 @@ type ContentType = 'awareness' | 'story' | 'campaign';
 type Form = { title: string; description: string; content: string; category: string; image_url: string; recipient_name: string; story_date: string; location: string; event_date: string; goal_units: string };
 type ChatApiResponse = { success?: boolean; message?: string; data?: { reply?: string } };
 const emptyForm: Form = { title: '', description: '', content: '', category: 'general', image_url: '', recipient_name: '', story_date: new Date().toISOString().slice(0, 10), location: '', event_date: new Date().toISOString().slice(0, 10), goal_units: '0' };
-const AI_CHAT_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:5000'}/api/ai/chat`;
+const AI_CHAT_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'https://bold-consultation-handmade-joint.trycloudflare.com'}/api/ai/chat`;
 
 const requestContentGeneration = async (message: string) => {
   const response = await fetch(AI_CHAT_ENDPOINT, {

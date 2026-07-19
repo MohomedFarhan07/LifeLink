@@ -5,7 +5,7 @@ import { CHATBOT_GREETING } from '../../lib/ai';
 interface Msg { role: 'bot' | 'user'; text: string; suggestions?: string[] }
 interface QuestionsApiResponse { success?: boolean; message?: string; data?: { answer?: string } }
 
-const AI_QUESTIONS_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:5000'}/api/ai/questions`;
+const AI_QUESTIONS_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'https://bold-consultation-handmade-joint.trycloudflare.com'}/api/ai/questions`;
 
 const buildAssistantQuestion = (question: string) => `
 You are LifeLink's AI Donation Assistant. Answer the user's question using clear, warm,
