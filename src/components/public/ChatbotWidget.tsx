@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot } from 'lucide-react';
 import { CHATBOT_GREETING } from '../../lib/ai';
-import { AI_API } from '../../lib/api';
+import { fetchAi } from '../../lib/api';
 
 interface Msg { role: 'bot' | 'user'; text: string; suggestions?: string[] }
 interface QuestionsApiResponse { success?: boolean; message?: string; data?: { answer?: string } }
-
-const AI_QUESTIONS_ENDPOINT = AI_API.questions;
 
 const buildAssistantQuestion = (question: string) => `
 You are LifeLink's AI Donation Assistant. Answer the user's question using clear, warm,
@@ -32,7 +30,7 @@ User question: ${question}
 `.trim();
 
 const requestDonationAnswer = async (question: string) => {
-  const response = await fetch(AI_QUESTIONS_ENDPOINT, {
+  const response = await fetchAi('questions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question: buildAssistantQuestion(question) }),

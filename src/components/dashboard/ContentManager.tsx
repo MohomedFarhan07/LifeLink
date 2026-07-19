@@ -4,7 +4,7 @@ import { Awareness, Campaign, SuccessStory } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { supabase } from '../../lib/supabase';
-import { AI_API } from '../../lib/api';
+import { fetchAi } from '../../lib/api';
 import { Card, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input, Textarea } from '../ui/Field';
@@ -16,10 +16,8 @@ type ContentType = 'awareness' | 'story' | 'campaign';
 type Form = { title: string; description: string; content: string; category: string; image_url: string; recipient_name: string; story_date: string; location: string; event_date: string; goal_units: string };
 type ChatApiResponse = { success?: boolean; message?: string; data?: { reply?: string } };
 const emptyForm: Form = { title: '', description: '', content: '', category: 'general', image_url: '', recipient_name: '', story_date: new Date().toISOString().slice(0, 10), location: '', event_date: new Date().toISOString().slice(0, 10), goal_units: '0' };
-const AI_CHAT_ENDPOINT = AI_API.chat;
-
 const requestContentGeneration = async (message: string) => {
-  const response = await fetch(AI_CHAT_ENDPOINT, {
+  const response = await fetchAi('chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message }),
