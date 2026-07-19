@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot } from 'lucide-react';
 import { CHATBOT_GREETING } from '../../lib/ai';
+import { AI_API } from '../../lib/api';
 
 interface Msg { role: 'bot' | 'user'; text: string; suggestions?: string[] }
 interface QuestionsApiResponse { success?: boolean; message?: string; data?: { answer?: string } }
 
-const AI_QUESTIONS_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'https://bold-consultation-handmade-joint.trycloudflare.com'}/api/ai/questions`;
+const AI_QUESTIONS_ENDPOINT = AI_API.questions;
 
 const buildAssistantQuestion = (question: string) => `
 You are LifeLink's AI Donation Assistant. Answer the user's question using clear, warm,

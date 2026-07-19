@@ -13,6 +13,7 @@ import { BloodGroupBadge, UrgencyBadge, StatusBadge } from '../../components/sha
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { supabase } from '../../lib/supabase';
+import { AI_API } from '../../lib/api';
 import { Donor, BloodRequest, Donation, Hospital, BloodGroup, Profile } from '../../types';
 import { formatDate, BLOOD_GROUPS, compatibleDonorGroups, daysUntil } from '../../lib/utils';
 import { sendNotification } from '../../lib/notifications';
@@ -22,7 +23,7 @@ import { PublicProfileLink } from '../../components/shared/PublicProfileLink';
 type Tab = 'overview' | 'requests' | 'inbox' | 'history' | 'hospitals' | 'profile' | 'campaigns' | 'bank_requests' | 'connections';
 type DashboardStats = { donations_completed: number; lives_impacted: number; active_requests: number };
 
-const AI_ELIGIBILITY_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'https://bold-consultation-handmade-joint.trycloudflare.com'}/api/ai/eligibility`;
+const AI_ELIGIBILITY_ENDPOINT = AI_API.eligibility;
 
 const calculateAge = (dateOfBirth: string | null | undefined) => {
   if (!dateOfBirth) return '';
