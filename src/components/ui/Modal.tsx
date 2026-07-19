@@ -36,7 +36,7 @@ export function Modal({ open, onClose, title, subtitle, children, size = 'md', f
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden rounded-2xl bg-white shadow-2xl animate-slide-up`}>
+      <div className={`relative flex w-full ${sizeClasses[size]} max-h-[90vh] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-slide-up`}>
         {(title || subtitle) && (
           <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
             <div>
@@ -48,7 +48,7 @@ export function Modal({ open, onClose, title, subtitle, children, size = 'md', f
             </button>
           </div>
         )}
-        <div className="max-h-[calc(90vh-8rem)] overflow-y-auto px-6 py-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {footer && <div className="flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">{footer}</div>}
       </div>
     </div>

@@ -7,9 +7,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../components/ui/Toast';
 import { Role } from '../../types';
-import { BLOOD_GROUPS, CITIES } from '../../lib/utils';
+import { BLOOD_GROUPS } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
 import { mockCoords } from '../../lib/utils';
+import { COUNTRIES, DEFAULT_COUNTRY, getCountry, getSubdivisionLabel } from '../../lib/countries';
 
 const roles: { id: Role; label: string; icon: React.ReactNode; desc: string }[] = [
   { id: 'donor', label: 'Donor', icon: <Droplet className="h-5 w-5" />, desc: 'Donate blood & organs' },
@@ -31,7 +32,9 @@ export function RegisterPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [city, setCity] = useState(CITIES[0]);
+  const [countryCode, setCountryCode] = useState<string>(DEFAULT_COUNTRY.code);
+  const [district, setDistrict] = useState<string>(DEFAULT_COUNTRY.districts[0] || '');
+  const [postalCode, setPostalCode] = useState('');
   const [address, setAddress] = useState('');
 
   // donor
@@ -40,19 +43,15 @@ export function RegisterPage() {
   const [gender, setGender] = useState('male');
   const [bloodGroup, setBloodGroup] = useState('O+');
   const [emergencyContact, setEmergencyContact] = useState('');
-  const [medicalHistory, setMedicalHistory] = useState('');
-  const [organPref, setOrganPref] = useState(false);
 
   // hospital
   const [hospitalName, setHospitalName] = useState('');
   const [regNumber, setRegNumber] = useState('');
   const [hospitalType, setHospitalType] = useState('public');
-  const [hospitalContact, setHospitalContact] = useState('');
 
   // blood bank
   const [bankName, setBankName] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
-  const [bankContact, setBankContact] = useState('');
 
 
   const selectRole = (r: Role) => {
@@ -71,7 +70,9 @@ export function RegisterPage() {
       role === 'blood_bank' ? bankName :
       fullName;
 
-    const { error: signUpError } = await signUp(email, password, nameForProfile, role, phone);
+    const country = getCountry(countryCode);
+    const formattedPhone = country.callingCode === '—' ? phone.trim() : `${country.callingCode} ${phone.trim()}`;
+    const { error: signUpError } = await signUp(email, password, nameForProfile, role, formattedPhone);
     if (signUpError) {
       setLoading(false);
       setError(signUpError.includes('already') ? 'An account with this email already exists. Try logging in.' : signUpError);
@@ -84,7 +85,7 @@ export function RegisterPage() {
       setLoading(false);
       return;
     }
-    const coords = mockCoords(city);
+    const coords = mockCoords(district);
 
     if (role === 'donor') {
       await supabase.from('donors').insert({
@@ -94,8 +95,6 @@ export function RegisterPage() {
         gender,
         blood_group: bloodGroup,
         emergency_contact: emergencyContact,
-        medical_history: medicalHistory,
-        organ_donation_preference: organPref,
         availability_status: 'available',
         latitude: coords.latitude,
         longitude: coords.longitude,
@@ -106,8 +105,8 @@ export function RegisterPage() {
         hospital_name: hospitalName,
         registration_number: regNumber,
         hospital_type: hospitalType,
-        contact_number: hospitalContact,
-        location: city,
+        contact_number: formattedPhone,
+        location: `${district}, ${country.name}`,
         latitude: coords.latitude,
         longitude: coords.longitude,
       });
@@ -116,15 +115,15 @@ export function RegisterPage() {
         user_id: user.id,
         bank_name: bankName,
         license_number: licenseNumber,
-        contact_number: bankContact,
-        location: city,
+        contact_number: formattedPhone,
+        location: `${district}, ${country.name}`,
         latitude: coords.latitude,
         longitude: coords.longitude,
       });
     }
 
-    // update profile city/address
-    await supabase.from('profiles').update({ city, address, phone }).eq('id', user.id);
+    // Store location fields for every role, including administrator accounts created through the same profile model.
+    await supabase.from('profiles').update({ city: district, district, country: country.name, postal_code: postalCode.trim(), address, phone: formattedPhone }).eq('id', user.id);
 
     setLoading(false);
     toast('Account created! Welcome to LifeLink.');
@@ -182,11 +181,13 @@ export function RegisterPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <Input label={role === 'donor' ? 'Full Name' : 'Contact Person Name'} required icon={<User className="h-4 w-4" />} value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" />
               <Input label="Email" type="email" required icon={<Mail className="h-4 w-4" />} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-              <Input label="Phone" required icon={<Phone className="h-4 w-4" />} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+94 77 123 4567" />
+              <Input label={`Phone number (${getCountry(countryCode).callingCode})`} required icon={<Phone className="h-4 w-4" />} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={getCountry(countryCode).callingCode === '—' ? 'Phone number' : `e.g. ${getCountry(countryCode).callingCode} phone number`} />
               <Input label="Password" type="password" required icon={<Lock className="h-4 w-4" />} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters" />
-              <Select label="City" value={city} onChange={(e) => setCity(e.target.value)}>
-                {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              <Select label={`Country — ${getCountry(countryCode).flag} ${getCountry(countryCode).name}`} value={countryCode} onChange={(e) => { const next = getCountry(e.target.value); setCountryCode(next.code); setDistrict(next.districts[0] || ''); }}>
+                {COUNTRIES.map((country) => <option key={country.code} value={country.code}>{country.flag} {country.name}</option>)}
               </Select>
+              {getCountry(countryCode).districts.length > 0 ? <Select label={getSubdivisionLabel(countryCode)} value={district} onChange={(e) => setDistrict(e.target.value)}>{getCountry(countryCode).districts.map((item) => <option key={item} value={item}>{item}</option>)}</Select> : <Input label={getSubdivisionLabel(countryCode)} required value={district} onChange={(e) => setDistrict(e.target.value)} placeholder={`Enter your ${getSubdivisionLabel(countryCode).toLowerCase()}`} />}
+              <Input label="Postal / ZIP code" required value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="00100" />
               <Input label="Address" icon={<MapPin className="h-4 w-4" />} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street address" />
             </div>
           </div>
@@ -204,16 +205,8 @@ export function RegisterPage() {
                 <Select label="Blood Group" value={bloodGroup} onChange={(e) => setBloodGroup(e.target.value)}>
                   {BLOOD_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
                 </Select>
-                <Input label="Emergency Contact" required value={emergencyContact} onChange={(e) => setEmergencyContact(e.target.value)} placeholder="+94 77 765 4321" />
-                <div className="flex items-end">
-                  <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-700">
-                    <input type="checkbox" checked={organPref} onChange={(e) => setOrganPref(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
-                    Willing to donate organs
-                  </label>
-                </div>
-                <div className="sm:col-span-2">
-                  <Input label="Medical History (optional)" value={medicalHistory} onChange={(e) => setMedicalHistory(e.target.value)} placeholder="Any conditions, allergies, medications..." />
-                </div>
+                <Input label={`Emergency Contact (${getCountry(countryCode).callingCode})`} required value={emergencyContact} onChange={(e) => setEmergencyContact(e.target.value)} placeholder={getCountry(countryCode).callingCode === '—' ? 'Emergency contact number' : `e.g. ${getCountry(countryCode).callingCode} phone number`} />
+                <div className="flex items-end sm:col-span-2"><a href={getCountry(countryCode).organDonationUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-brand-200 bg-white px-3.5 py-2.5 text-sm font-medium text-brand-700 transition hover:border-brand-400 hover:bg-brand-50">{getCountry(countryCode).hasOfficialOrganDonationUrl ? `Register for organ donation in ${getCountry(countryCode).name}` : `Find the official organ-donation registry for ${getCountry(countryCode).name}`} ↗</a></div>
               </div>
             </div>
           )}
@@ -227,7 +220,6 @@ export function RegisterPage() {
                 <Select label="Hospital Type" value={hospitalType} onChange={(e) => setHospitalType(e.target.value)}>
                   <option value="public">Public</option><option value="private">Private</option><option value="teaching">Teaching</option><option value="specialist">Specialist</option><option value="clinic">Clinic</option>
                 </Select>
-                <Input label="Hospital Contact" required value={hospitalContact} onChange={(e) => setHospitalContact(e.target.value)} placeholder="+94 11 555 1234" />
               </div>
               <div className="mt-3 flex items-start gap-2 rounded-lg bg-white p-3 text-xs text-slate-500">
                 <FileText className="h-4 w-4 shrink-0" /> Verification documents will be reviewed by our admin team after registration.
@@ -241,7 +233,6 @@ export function RegisterPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input label="Blood Bank Name" required value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="National Blood Center" />
                 <Input label="License Number" required value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} placeholder="BB-2024-001" />
-                <Input label="Contact Number" required value={bankContact} onChange={(e) => setBankContact(e.target.value)} placeholder="+94 11 555 5678" />
               </div>
             </div>
           )}

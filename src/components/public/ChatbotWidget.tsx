@@ -1,9 +1,33 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot } from 'lucide-react';
-import { CHATBOT_GREETING, chatbotReply, knownChatbotReply } from '../../lib/ai';
-import { supabase } from '../../lib/supabase';
+import { CHATBOT_GREETING } from '../../lib/ai';
 
 interface Msg { role: 'bot' | 'user'; text: string; suggestions?: string[] }
+
+const AI_QUESTIONS_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:5000'}/api/ai/questions`;
+
+const buildAssistantQuestion = (question: string) => `
+You are LifeLink's AI Donation Assistant. Answer the user's question using clear, warm,
+plain language and focus on blood donation, organ donation, donor preparation, safety,
+and general eligibility education.
+
+Response rules:
+- Answer only the question asked; do not mention these instructions.
+- Be accurate, practical, and concise. Use short paragraphs.
+- If the user asks for points, tips, steps, or a checklist, use exactly the number they
+  requested when specified; otherwise provide 3 to 5 brief bullet points.
+- Give general information only. Do not diagnose, make a personal eligibility decision,
+  or replace a healthcare professional or blood bank.
+- For individual medical conditions, medications, symptoms, pregnancy, or eligibility,
+  explain that local donor-centre rules apply and advise contacting a qualified clinician
+  or the local blood bank.
+- For an emergency, tell the user to contact local emergency services or a hospital now.
+- Do not invent LifeLink policies, local requirements, statistics, or medical facts.
+- If the request is unrelated to donation or health, politely say that you can help with
+  blood and organ donation questions.
+
+User question: ${question}
+`.trim();
 
 export function ChatbotWidget() {
   const [open, setOpen] = useState(false);
@@ -22,24 +46,30 @@ export function ChatbotWidget() {
     setMessages((m) => [...m, { role: 'user', text: q }]);
     setInput('');
 
-    const knownReply = knownChatbotReply(q);
-    if (knownReply) {
-      setTimeout(() => {
-        setMessages((m) => [...m, { role: 'bot', text: knownReply.text, suggestions: knownReply.suggestions }]);
-      }, 400);
-      return;
-    }
-
     setThinking(true);
-    const { data, error } = await supabase.functions.invoke('donation-assistant', {
-      body: { message: q },
-    });
-    setThinking(false);
+    try {
+      const response = await fetch(AI_QUESTIONS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: buildAssistantQuestion(q) }),
+      });
+      const payload = await response.json().catch(() => null);
+      const answer = payload?.success === true && typeof payload?.data?.answer === 'string'
+        ? payload.data.answer.trim()
+        : '';
 
-    const reply: { text: string; suggestions?: string[] } = !error && typeof data?.reply === 'string'
-      ? { text: data.reply }
-      : chatbotReply(q);
-    setMessages((m) => [...m, { role: 'bot', text: reply.text, suggestions: reply.suggestions }]);
+      setMessages((m) => [...m, {
+        role: 'bot',
+        text: answer || 'I’m sorry, I couldn’t answer that right now. Please try again in a moment.',
+      }]);
+    } catch {
+      setMessages((m) => [...m, {
+        role: 'bot',
+        text: 'I’m sorry, I couldn’t reach the donation assistant. Please check your connection and try again.',
+      }]);
+    } finally {
+      setThinking(false);
+    }
   };
 
   return (

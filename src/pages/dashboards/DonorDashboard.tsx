@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Droplet, Heart, Activity, Building2, Calendar, MapPin, Phone, User, Edit3, Check, X, Clock, TrendingUp, Award, Bell, Inbox, MessageSquare } from 'lucide-react';
+import { Droplet, Heart, Activity, Building2, Calendar, MapPin, Phone, User, Edit3, Check, X, Clock, TrendingUp, Award, Bell, Inbox, MessageSquare, ClipboardCheck, Plus, Trash2 } from 'lucide-react';
 import { DashboardLayout } from '../../components/dashboard/DashboardLayout';
 import { ChatPanel } from '../../components/dashboard/ChatPanel';
 import { Card, CardHeader } from '../../components/ui/Card';
@@ -21,6 +21,20 @@ import { PublicProfileLink } from '../../components/shared/PublicProfileLink';
 
 type Tab = 'overview' | 'requests' | 'inbox' | 'history' | 'hospitals' | 'profile' | 'campaigns' | 'bank_requests' | 'connections';
 
+const AI_ELIGIBILITY_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:5000'}/api/ai/eligibility`;
+
+const calculateAge = (dateOfBirth: string | null | undefined) => {
+  if (!dateOfBirth) return '';
+  const birthDate = new Date(`${dateOfBirth}T00:00:00`);
+  if (Number.isNaN(birthDate.getTime())) return '';
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const birthdayHasPassed = today.getMonth() > birthDate.getMonth()
+    || (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
+  if (!birthdayHasPassed) age -= 1;
+  return age >= 0 ? String(age) : '';
+};
+
 export function DonorDashboard() {
   const { profile, signOut } = useAuth();
   const { toast } = useToast();
@@ -39,6 +53,15 @@ export function DonorDashboard() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [eligibilityOpen, setEligibilityOpen] = useState(false);
+  const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const [eligibilityStatus, setEligibilityStatus] = useState<boolean | null>(null);
+  const [eligibilityResult, setEligibilityResult] = useState<{ eligible: boolean; explanation: string; recommendations: string[] } | null>(null);
+  const [healthScreen, setHealthScreen] = useState({
+    age: '', weight: '', gender: '', firstTimeDonor: true, lastDonationDate: '', diabetes: false,
+    highBloodPressure: false, highCholesterol: false, recentTattoo: false, tattooDetails: '',
+    recentIllness: '', lifestyleInformation: '', healthDetails: '', medicines: [] as { name: string; dosage: string }[],
+  });
 
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== 'delete') return;
@@ -58,6 +81,15 @@ export function DonorDashboard() {
     const { data: d } = await supabase.from('donors').select('*').eq('user_id', profile.id).maybeSingle();
     setDonor(d as Donor | null);
     setEditForm(d || {});
+
+    const { data: latestEligibility } = await supabase
+      .from('donor_eligibility_checks')
+      .select('ai_eligible')
+      .eq('donor_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setEligibilityStatus(latestEligibility ? Boolean(latestEligibility.ai_eligible) : null);
 
     const compatible = d ? compatibleDonorGroups(d.blood_group as BloodGroup) : [];
     const { data: reqs } = await supabase
@@ -101,6 +133,17 @@ export function DonorDashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!donor) return;
+    setHealthScreen((current) => ({
+      ...current,
+      age: current.age || calculateAge(donor.date_of_birth),
+      gender: current.gender || donor.gender,
+      firstTimeDonor: !donor.last_donation_date,
+      lastDonationDate: current.lastDonationDate || donor.last_donation_date || '',
+    }));
+  }, [donor]);
 
   const toggleAvailability = async () => {
     if (!donor) return;
@@ -152,6 +195,90 @@ export function DonorDashboard() {
     setDonations((prev) => prev.map((d) => (d.id === don.id ? { ...d, status: 'completed' } : d)));
     toast('Donation marked as completed. Thank you for saving lives!');
     loadData();
+  };
+
+  const checkEligibility = async () => {
+    if (!profile) return toast('Please sign in before checking eligibility.', 'error');
+    const age = Number(healthScreen.age);
+    const weight = Number(healthScreen.weight);
+    if (!Number.isFinite(age) || age <= 0 || !Number.isFinite(weight) || weight <= 0 || !healthScreen.gender) {
+      return toast('Enter your age, weight, and gender before checking eligibility.', 'error');
+    }
+    if (!healthScreen.firstTimeDonor && !healthScreen.lastDonationDate) {
+      return toast('Enter the date of your most recent donation, or select first-time donor.', 'error');
+    }
+
+    const medicalConditions = [
+      healthScreen.diabetes && 'Diabetes',
+      healthScreen.highBloodPressure && 'High blood pressure',
+      healthScreen.highCholesterol && 'High cholesterol',
+    ].filter(Boolean).join(', ') || 'None reported';
+    const medications = healthScreen.medicines
+      .filter((medicine) => medicine.name.trim())
+      .map((medicine) => `${medicine.name.trim()}${medicine.dosage.trim() ? ` (${medicine.dosage.trim()})` : ''}`)
+      .join(', ') || 'None reported';
+    const otherDetails = [
+      healthScreen.recentTattoo && `Recent tattoo or piercing: ${healthScreen.tattooDetails.trim() || 'details not provided'}`,
+      healthScreen.healthDetails.trim(),
+    ].filter(Boolean).join('. ') || 'None reported';
+    const eligibilityRequest = {
+      age,
+      weight,
+      gender: healthScreen.gender,
+      lastDonationDate: healthScreen.firstTimeDonor ? 'First-time donor; no previous blood donation.' : healthScreen.lastDonationDate,
+      medicalConditions,
+      medications,
+      recentIllness: healthScreen.recentIllness.trim() || 'None reported',
+      lifestyleInformation: healthScreen.lifestyleInformation.trim() || 'None reported',
+      otherDetails,
+    };
+
+    setCheckingEligibility(true);
+    setEligibilityResult(null);
+    try {
+      const response = await fetch(AI_ELIGIBILITY_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eligibilityRequest),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || payload?.success !== true || !payload?.data) {
+        throw new Error(payload?.message || 'Could not complete the eligibility check.');
+      }
+      const assessment = {
+        eligible: Boolean(payload.data.eligible),
+        explanation: String(payload.data.explanation || 'Please confirm your eligibility with a blood bank or clinician.'),
+        recommendations: Array.isArray(payload.data.recommendations) ? payload.data.recommendations.filter((item: unknown) => typeof item === 'string') : [],
+      };
+      const { error: saveError } = await supabase.from('donor_eligibility_checks').insert({
+        donor_id: profile.id,
+        has_diabetes: healthScreen.diabetes,
+        has_high_blood_pressure: healthScreen.highBloodPressure,
+        has_high_cholesterol: healthScreen.highCholesterol,
+        has_recent_tattoo: healthScreen.recentTattoo,
+        tattoo_details: healthScreen.tattooDetails.trim(),
+        medicines: healthScreen.medicines.filter((medicine) => medicine.name.trim()),
+        health_details: [
+          `Age: ${age}; Weight: ${weight} kg; Gender: ${healthScreen.gender}.`,
+          `Last donation: ${eligibilityRequest.lastDonationDate}.`,
+          `Recent illness: ${eligibilityRequest.recentIllness}.`,
+          `Lifestyle information: ${eligibilityRequest.lifestyleInformation}.`,
+          `Other details: ${eligibilityRequest.otherDetails}.`,
+        ].join(' '),
+        ai_eligible: assessment.eligible,
+        ai_reason: [assessment.explanation, ...assessment.recommendations].join('\n'),
+      });
+      if (saveError) throw new Error(`Eligibility result could not be saved: ${saveError.message}`);
+
+      setEligibilityResult(assessment);
+      setEligibilityStatus(assessment.eligible);
+      setEligibilityOpen(false);
+      toast(assessment.eligible ? 'Eligibility check completed: eligible.' : 'Eligibility check completed: not eligible.', assessment.eligible ? 'success' : 'error');
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Could not reach the eligibility service. Please try again.', 'error');
+    } finally {
+      setCheckingEligibility(false);
+    }
   };
 
   const saveProfile = async () => {
@@ -232,7 +359,11 @@ export function DonorDashboard() {
             <StatCard label="Donations Completed" value={completedDonations.length} icon={<Heart className="h-5 w-5" />} accent="brand" />
             <StatCard label="Lives Impacted" value={completedDonations.length * 3} icon={<Award className="h-5 w-5" />} accent="emerald" />
             <StatCard label="Active Requests" value={requests.length} icon={<Bell className="h-5 w-5" />} accent="amber" />
-            <StatCard label="Eligibility" value={eligible ? 'Eligible' : 'Waiting'} icon={<Droplet className="h-5 w-5" />} accent="sky" />
+            <button disabled={eligibilityStatus === false} onClick={() => { if (eligibilityStatus !== false) { setEligibilityResult(null); setEligibilityOpen(true); } }} className={`rounded-xl border p-5 text-left transition hover:shadow-sm disabled:cursor-default ${eligibilityStatus === true ? 'border-emerald-200 bg-emerald-50 hover:border-emerald-400 dark:border-emerald-900 dark:bg-emerald-950/30' : eligibilityStatus === false ? 'border-rose-200 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/30' : 'border-sky-200 bg-sky-50 hover:border-sky-400 dark:border-sky-900 dark:bg-sky-950/30'}`}>
+              <div className="flex items-center justify-between"><p className="text-sm font-medium text-slate-600 dark:text-slate-300">Eligibility</p><ClipboardCheck className={`h-5 w-5 ${eligibilityStatus === true ? 'text-emerald-600' : eligibilityStatus === false ? 'text-rose-600' : 'text-sky-600'}`} /></div>
+              <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{eligibilityStatus === true ? 'Eligible' : eligibilityStatus === false ? 'Not eligible' : 'Check eligibility'}</p>
+              <p className={`mt-1 text-xs ${eligibilityStatus === true ? 'text-emerald-700 dark:text-emerald-300' : eligibilityStatus === false ? 'text-rose-700 dark:text-rose-300' : 'text-sky-700 dark:text-sky-300'}`}>{eligibilityStatus === null ? 'Complete a private health screen' : eligibilityStatus ? 'Click to run another check' : 'Please contact a blood bank or clinician for guidance'}</p>
+            </button>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
@@ -575,6 +706,40 @@ export function DonorDashboard() {
           <div className="sm:col-span-2">
             <Textarea label="Medical History" rows={3} value={editForm.medical_history || ''} onChange={(e) => setEditForm({ ...editForm, medical_history: e.target.value })} />
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={eligibilityOpen}
+        onClose={() => !checkingEligibility && setEligibilityOpen(false)}
+        title="Check donation eligibility"
+        subtitle="Private preliminary screen — this is not medical clearance. Confirm with a blood bank or clinician."
+        size="lg"
+        footer={<><Button variant="outline" onClick={() => setEligibilityOpen(false)} disabled={checkingEligibility}>Close</Button><Button onClick={() => void checkEligibility()} loading={checkingEligibility} icon={<ClipboardCheck className="h-4 w-4" />}>Check eligibility</Button></>}
+      >
+        <div className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input label="Age" type="number" min="1" value={healthScreen.age} onChange={(event) => setHealthScreen({ ...healthScreen, age: event.target.value })} required />
+            <Input label="Weight (kg)" type="number" min="1" step="0.1" value={healthScreen.weight} onChange={(event) => setHealthScreen({ ...healthScreen, weight: event.target.value })} required />
+            <Select label="Gender" value={healthScreen.gender} onChange={(event) => setHealthScreen({ ...healthScreen, gender: event.target.value })} required>
+              <option value="" disabled>Select gender</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
+            </Select>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Donation history</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700"><input type="radio" checked={healthScreen.firstTimeDonor} onChange={() => setHealthScreen({ ...healthScreen, firstTimeDonor: true, lastDonationDate: '' })} />I am a first-time donor</label>
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700"><input type="radio" checked={!healthScreen.firstTimeDonor} onChange={() => setHealthScreen({ ...healthScreen, firstTimeDonor: false })} />I have donated before</label>
+            </div>
+            {!healthScreen.firstTimeDonor && <Input label="Last donation date" type="date" value={healthScreen.lastDonationDate} onChange={(event) => setHealthScreen({ ...healthScreen, lastDonationDate: event.target.value })} required />}
+          </div>
+          <div><p className="text-sm font-semibold text-slate-900">Health conditions</p><p className="mt-1 text-xs text-slate-500">Tick any that apply. Leave all unticked if none apply.</p><div className="mt-3 grid gap-2 sm:grid-cols-3">{([{ key: 'diabetes', label: 'Diabetes' }, { key: 'highBloodPressure', label: 'High blood pressure' }, { key: 'highCholesterol', label: 'High cholesterol' }] as const).map((condition) => <label key={condition.key} className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm text-slate-700"><input type="checkbox" checked={healthScreen[condition.key]} onChange={(event) => setHealthScreen({ ...healthScreen, [condition.key]: event.target.checked })} className="h-4 w-4 rounded border-slate-300 text-brand-600" />{condition.label}</label>)}</div></div>
+          <div><label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm font-medium text-slate-700"><input type="checkbox" checked={healthScreen.recentTattoo} onChange={(event) => setHealthScreen({ ...healthScreen, recentTattoo: event.target.checked })} className="h-4 w-4 rounded border-slate-300 text-brand-600" />I have had a recent tattoo or piercing</label>{healthScreen.recentTattoo && <Textarea label="Tattoo / piercing details" rows={2} value={healthScreen.tattooDetails} onChange={(event) => setHealthScreen({ ...healthScreen, tattooDetails: event.target.value })} placeholder="Date, type, and any relevant details" />}</div>
+          <div><div className="flex items-center justify-between"><div><p className="text-sm font-semibold text-slate-900">Current medicines</p><p className="mt-1 text-xs text-slate-500">Optional — add each medicine and dosage separately.</p></div><Button size="sm" variant="outline" onClick={() => setHealthScreen({ ...healthScreen, medicines: [...healthScreen.medicines, { name: '', dosage: '' }] })} icon={<Plus className="h-4 w-4" />}>Add medicine</Button></div><div className="mt-3 space-y-2">{healthScreen.medicines.map((medicine, index) => <div key={index} className="flex gap-2"><input className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" value={medicine.name} onChange={(event) => setHealthScreen({ ...healthScreen, medicines: healthScreen.medicines.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item) })} placeholder="Medicine name" /><input className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" value={medicine.dosage} onChange={(event) => setHealthScreen({ ...healthScreen, medicines: healthScreen.medicines.map((item, itemIndex) => itemIndex === index ? { ...item, dosage: event.target.value } : item) })} placeholder="Dosage" /><button type="button" onClick={() => setHealthScreen({ ...healthScreen, medicines: healthScreen.medicines.filter((_, itemIndex) => itemIndex !== index) })} className="rounded-lg p-2 text-slate-400 hover:bg-brand-50 hover:text-brand-600" aria-label="Remove medicine"><Trash2 className="h-4 w-4" /></button></div>)}</div></div>
+          <Textarea label="Recent illness" rows={2} value={healthScreen.recentIllness} onChange={(event) => setHealthScreen({ ...healthScreen, recentIllness: event.target.value })} placeholder="Optional: fever, infection, surgery, or symptoms in the last few weeks" />
+          <Textarea label="Lifestyle information" rows={2} value={healthScreen.lifestyleInformation} onChange={(event) => setHealthScreen({ ...healthScreen, lifestyleInformation: event.target.value })} placeholder="Optional: relevant travel or activities that may affect donation" />
+          <Textarea label="Other health details" rows={3} value={healthScreen.healthDetails} onChange={(event) => setHealthScreen({ ...healthScreen, healthDetails: event.target.value })} placeholder="Optional: allergies, pregnancy, or any other information that may matter" />
+          {eligibilityResult && <div className={`rounded-xl border p-4 ${eligibilityResult.eligible ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}><p className="font-semibold">{eligibilityResult.eligible ? 'Preliminary result: likely eligible' : 'Preliminary result: professional review needed'}</p><p className="mt-1 text-sm">{eligibilityResult.explanation}</p>{eligibilityResult.recommendations.length > 0 && <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">{eligibilityResult.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>)}</ul>}<p className="mt-2 text-xs">This screen is not a medical decision. A blood bank or qualified clinician must confirm eligibility.</p></div>}
         </div>
       </Modal>
 

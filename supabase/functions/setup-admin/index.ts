@@ -61,6 +61,9 @@ Deno.serve(async (req: Request) => {
       full_name: "LifeLink Admin",
       role: "admin",
       phone: "+94 11 555 0000",
+      country: "Sri Lanka",
+      district: "Colombo",
+      postal_code: "00100",
     });
 
     return new Response(JSON.stringify({

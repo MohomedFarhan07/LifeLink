@@ -12,6 +12,9 @@ export interface Profile {
   full_name: string;
   role: Role;
   phone: string;
+  country: string;
+  district: string;
+  postal_code: string;
   avatar_url: string;
   city: string;
   address: string;
