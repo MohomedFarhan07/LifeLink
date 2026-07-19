@@ -221,16 +221,21 @@ export function DonorDashboard() {
       healthScreen.recentTattoo && `Recent tattoo or piercing: ${healthScreen.tattooDetails.trim() || 'details not provided'}`,
       healthScreen.healthDetails.trim(),
     ].filter(Boolean).join('. ') || 'None reported';
+    // Feature 2 accepts an optional lastDonationDate. For a first-time donor, omit it
+    // and preserve that context in otherDetails instead of sending a fake date string.
+    const donationHistory = healthScreen.firstTimeDonor
+      ? 'Donation history: first-time donor; no previous blood donation.'
+      : `Donation history: last donation on ${healthScreen.lastDonationDate}.`;
     const eligibilityRequest = {
       age,
       weight,
       gender: healthScreen.gender,
-      lastDonationDate: healthScreen.firstTimeDonor ? 'First-time donor; no previous blood donation.' : healthScreen.lastDonationDate,
+      lastDonationDate: healthScreen.firstTimeDonor ? undefined : healthScreen.lastDonationDate,
       medicalConditions,
       medications,
       recentIllness: healthScreen.recentIllness.trim() || 'None reported',
       lifestyleInformation: healthScreen.lifestyleInformation.trim() || 'None reported',
-      otherDetails,
+      otherDetails: `${donationHistory} ${otherDetails}`.trim(),
     };
 
     setCheckingEligibility(true);
@@ -242,11 +247,11 @@ export function DonorDashboard() {
         body: JSON.stringify(eligibilityRequest),
       });
       const payload = await response.json().catch(() => null);
-      if (!response.ok || payload?.success !== true || !payload?.data) {
+      if (!response.ok || payload?.success !== true || !payload?.data || typeof payload.data.eligible !== 'boolean') {
         throw new Error(payload?.message || 'Could not complete the eligibility check.');
       }
       const assessment = {
-        eligible: Boolean(payload.data.eligible),
+        eligible: payload.data.eligible,
         explanation: String(payload.data.explanation || 'Please confirm your eligibility with a blood bank or clinician.'),
         recommendations: Array.isArray(payload.data.recommendations) ? payload.data.recommendations.filter((item: unknown) => typeof item === 'string') : [],
       };
@@ -260,7 +265,7 @@ export function DonorDashboard() {
         medicines: healthScreen.medicines.filter((medicine) => medicine.name.trim()),
         health_details: [
           `Age: ${age}; Weight: ${weight} kg; Gender: ${healthScreen.gender}.`,
-          `Last donation: ${eligibilityRequest.lastDonationDate}.`,
+          donationHistory,
           `Recent illness: ${eligibilityRequest.recentIllness}.`,
           `Lifestyle information: ${eligibilityRequest.lifestyleInformation}.`,
           `Other details: ${eligibilityRequest.otherDetails}.`,
@@ -279,6 +284,14 @@ export function DonorDashboard() {
     } finally {
       setCheckingEligibility(false);
     }
+  };
+
+  const openEligibilityCheck = () => {
+    // A saved negative assessment is informational only. Donors must contact a
+    // blood bank or clinician instead of immediately starting another check.
+    if (eligibilityStatus === false) return;
+    setEligibilityResult(null);
+    setEligibilityOpen(true);
   };
 
   const saveProfile = async () => {
@@ -359,7 +372,7 @@ export function DonorDashboard() {
             <StatCard label="Donations Completed" value={completedDonations.length} icon={<Heart className="h-5 w-5" />} accent="brand" />
             <StatCard label="Lives Impacted" value={completedDonations.length * 3} icon={<Award className="h-5 w-5" />} accent="emerald" />
             <StatCard label="Active Requests" value={requests.length} icon={<Bell className="h-5 w-5" />} accent="amber" />
-            <button disabled={eligibilityStatus === false} onClick={() => { if (eligibilityStatus !== false) { setEligibilityResult(null); setEligibilityOpen(true); } }} className={`rounded-xl border p-5 text-left transition hover:shadow-sm disabled:cursor-default ${eligibilityStatus === true ? 'border-emerald-200 bg-emerald-50 hover:border-emerald-400 dark:border-emerald-900 dark:bg-emerald-950/30' : eligibilityStatus === false ? 'border-rose-200 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/30' : 'border-sky-200 bg-sky-50 hover:border-sky-400 dark:border-sky-900 dark:bg-sky-950/30'}`}>
+            <button disabled={eligibilityStatus === false} onClick={openEligibilityCheck} className={`rounded-xl border p-5 text-left transition hover:shadow-sm disabled:cursor-default ${eligibilityStatus === true ? 'border-emerald-200 bg-emerald-50 hover:border-emerald-400 dark:border-emerald-900 dark:bg-emerald-950/30' : eligibilityStatus === false ? 'border-rose-200 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/30' : 'border-sky-200 bg-sky-50 hover:border-sky-400 dark:border-rose-900 dark:bg-rose-950/30'}`}>
               <div className="flex items-center justify-between"><p className="text-sm font-medium text-slate-600 dark:text-slate-300">Eligibility</p><ClipboardCheck className={`h-5 w-5 ${eligibilityStatus === true ? 'text-emerald-600' : eligibilityStatus === false ? 'text-rose-600' : 'text-sky-600'}`} /></div>
               <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">{eligibilityStatus === true ? 'Eligible' : eligibilityStatus === false ? 'Not eligible' : 'Check eligibility'}</p>
               <p className={`mt-1 text-xs ${eligibilityStatus === true ? 'text-emerald-700 dark:text-emerald-300' : eligibilityStatus === false ? 'text-rose-700 dark:text-rose-300' : 'text-sky-700 dark:text-sky-300'}`}>{eligibilityStatus === null ? 'Complete a private health screen' : eligibilityStatus ? 'Click to run another check' : 'Please contact a blood bank or clinician for guidance'}</p>
@@ -718,6 +731,7 @@ export function DonorDashboard() {
         footer={<><Button variant="outline" onClick={() => setEligibilityOpen(false)} disabled={checkingEligibility}>Close</Button><Button onClick={() => void checkEligibility()} loading={checkingEligibility} icon={<ClipboardCheck className="h-4 w-4" />}>Check eligibility</Button></>}
       >
         <div className="space-y-5">
+          {checkingEligibility && <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800" role="status">Checking your information. Please keep this form open until the result is ready.</div>}
           <div className="grid gap-4 sm:grid-cols-3">
             <Input label="Age" type="number" min="1" value={healthScreen.age} onChange={(event) => setHealthScreen({ ...healthScreen, age: event.target.value })} required />
             <Input label="Weight (kg)" type="number" min="1" step="0.1" value={healthScreen.weight} onChange={(event) => setHealthScreen({ ...healthScreen, weight: event.target.value })} required />

@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Bot } from 'lucide-react';
 import { CHATBOT_GREETING } from '../../lib/ai';
 
 interface Msg { role: 'bot' | 'user'; text: string; suggestions?: string[] }
+interface QuestionsApiResponse { success?: boolean; message?: string; data?: { answer?: string } }
 
 const AI_QUESTIONS_ENDPOINT = `${import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:5000'}/api/ai/questions`;
 
@@ -29,6 +30,21 @@ Response rules:
 User question: ${question}
 `.trim();
 
+const requestDonationAnswer = async (question: string) => {
+  const response = await fetch(AI_QUESTIONS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: buildAssistantQuestion(question) }),
+  });
+  const payload = await response.json().catch(() => null) as QuestionsApiResponse | null;
+  const answer = payload?.success === true && typeof payload.data?.answer === 'string'
+    ? payload.data.answer.trim()
+    : '';
+
+  if (!response.ok || !answer) throw new Error(payload?.message || 'The donation assistant did not return an answer.');
+  return answer;
+};
+
 export function ChatbotWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([{ role: 'bot', text: CHATBOT_GREETING.text, suggestions: CHATBOT_GREETING.suggestions }]);
@@ -48,15 +64,7 @@ export function ChatbotWidget() {
 
     setThinking(true);
     try {
-      const response = await fetch(AI_QUESTIONS_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: buildAssistantQuestion(q) }),
-      });
-      const payload = await response.json().catch(() => null);
-      const answer = payload?.success === true && typeof payload?.data?.answer === 'string'
-        ? payload.data.answer.trim()
-        : '';
+      const answer = await requestDonationAnswer(q);
 
       setMessages((m) => [...m, {
         role: 'bot',
