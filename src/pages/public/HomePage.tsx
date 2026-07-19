@@ -9,26 +9,29 @@ import { supabase } from '../../lib/supabase';
 import { BloodGroup } from '../../types';
 import { CHATBOT_GREETING, chatbotReply } from '../../lib/ai';
 import { ChatbotWidget } from '../../components/public/ChatbotWidget';
+import { cachedQuery } from '../../lib/cache';
 
 export function HomePage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ donors: 0, hospitals: 0, donations: 0, requests: 0 });
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      const [d, h, don, r] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'donor'),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'hospital'),
-        supabase.from('donations').select('id', { count: 'exact', head: true }).eq('status', 'completed'),
-        supabase.from('blood_requests').select('id', { count: 'exact', head: true }).eq('status', 'open'),
-      ]);
-      setStats({
-        donors: d.count || 0,
-        hospitals: h.count || 0,
-        donations: don.count || 0,
-        requests: r.count || 0,
-      });
+      const nextStats = await cachedQuery('public:home-stats:v2', async () => {
+        const { data, error } = await supabase.rpc('get_platform_stats');
+        if (error) throw error;
+        const counts = Array.isArray(data) ? data[0] : data;
+        return {
+          donors: Number(counts?.donors) || 0,
+          hospitals: Number(counts?.hospitals) || 0,
+          donations: Number(counts?.lives_saved) || 0,
+          requests: 0,
+        };
+      }, 60_000);
+      if (active) setStats(nextStats);
     })();
+    return () => { active = false; };
   }, []);
 
   return (
