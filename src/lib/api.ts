@@ -4,7 +4,7 @@ export const API_BASE_URL = (
   import.meta.env.VITE_BACKEND_URL ??
   "https://generate-achievement-scope-providing.trycloudflare.com"
 ).replace(/\/+$/, "");
-export const AI_FALLBACK_BASE_URL = "http://192.168.8.184:5000";
+export const AI_FALLBACK_BASE_URL = "";
 
 export const AI_API = {
   chat: `${API_BASE_URL}/api/ai/chat`,
