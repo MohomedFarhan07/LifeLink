@@ -35,12 +35,12 @@ const requestDonationAnswer = async (question: string) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question: buildAssistantQuestion(question) }),
   });
-  const payload = await response.json().catch(() => null) as QuestionsApiResponse | null;
+  const payload = await response?.json().catch(() => null) as QuestionsApiResponse | null;
   const answer = payload?.success === true && typeof payload.data?.answer === 'string'
     ? payload.data.answer.trim()
     : '';
 
-  if (!response.ok || !answer) throw new Error(payload?.message || 'The donation assistant did not return an answer.');
+  if (!response?.ok || !answer) throw new Error(payload?.message || 'The donation assistant did not return an answer.');
   return answer;
 };
 
