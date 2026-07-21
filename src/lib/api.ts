@@ -2,7 +2,7 @@
 // against the local-network backend so the app remains usable on the same LAN.
 export const API_BASE_URL = (
   import.meta.env.VITE_BACKEND_URL ??
-  "https://generate-achievement-scope-providing.trycloudflare.com"
+  "https://from-illustrated-construction-listed.trycloudflare.com"
 ).replace(/\/+$/, "");
 export const AI_FALLBACK_BASE_URL = "";
 
